@@ -2,17 +2,16 @@ package com.gabrielgavrilov.mocha;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.hubspot.jinjava.lib.exptest.IsOddExpTest;
 
 import java.io.*;
-import java.nio.Buffer;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
 
-public class MochaClient<T> {
+public class MochaClient {
 
     /**
      * Initializes the MochaClient class. Reads the socket's requested header
@@ -40,7 +39,7 @@ public class MochaClient<T> {
 
             handleRequest(clientHeader.toString(), route, method, clientOutput, buffReader);
         }
-        catch (IOException e)
+        catch (IOException | InvocationTargetException | IllegalAccessException e)
         {
             throw new RuntimeException(e);
         }
@@ -56,8 +55,7 @@ public class MochaClient<T> {
      * @param buffReader Buffered Reader
      * @throws IOException
      */
-    private void handleRequest(String header, String route, String method, OutputStream clientOutput, BufferedReader buffReader) throws IOException
-    {
+    private void handleRequest(String header, String route, String method, OutputStream clientOutput, BufferedReader buffReader) throws IOException, InvocationTargetException, IllegalAccessException {
         String type = checkForStaticRoute(route);
 
         if(type != null)
@@ -199,8 +197,7 @@ public class MochaClient<T> {
      * @param clientOutput Client output stream.
      * @throws IOException
      */
-    private void handleGetRequest(String header, String route, OutputStream clientOutput) throws IOException
-    {
+    private void handleGetRequest(String header, String route, OutputStream clientOutput) throws IOException, InvocationTargetException, IllegalAccessException {
         BiConsumer<MochaRequest, MochaResponse> consumerResponse = getBiConsumerFromParsedRoute(route, Mocha.GET_ROUTES);
 
         if(consumerResponse != null)
@@ -209,9 +206,14 @@ public class MochaClient<T> {
             return;
         }
 
-        if(Mocha.GET_ROUTES.get(route) != null)
-        {
-            handleGetResponse(header, route, clientOutput);
+//        if(Mocha.GET_ROUTES.get(route) != null)
+//        {
+//            handleGetResponse(header, route, clientOutput);
+//        }
+
+        if (Mocha.get_routes.get(route) != null) {
+            ControllerRoute controllerRoute = Mocha.get_routes.get(route);
+            controllerRoute.controllerMethod.invoke(controllerRoute.controllerInstance);
         }
 
         else
@@ -656,8 +658,7 @@ public class MochaClient<T> {
         }
 
         MochaResponse response = new MochaResponse();
-        response.initializeHeader("200 OK", "text/html");
-        response.send("<h1>Not Found</h1><p>The requested URL was not found on this server.</p><hr><p>Mocha/" + Mocha.MOCHA_VERSION + "</p>");
+        response.status("404 Not Found");
         writeFullResponse(response, clientOutput);
     }
 

@@ -1,7 +1,15 @@
 package com.gabrielgavrilov.mocha;
 
+import com.gabrielgavrilov.mocha.annotations.Controller;
+import com.gabrielgavrilov.mocha.annotations.Get;
+import com.gabrielgavrilov.mocha.annotations.Route;
+
 import java.io.*;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.function.BiConsumer;
 
 /**
@@ -14,12 +22,23 @@ public class Mocha
     /**
      * CRUD routes
      */
-    protected static String MOCHA_VERSION = "1.5.0";
-
     protected static HashMap<String, BiConsumer<MochaRequest, MochaResponse>> GET_ROUTES = new HashMap<>();
     protected static HashMap<String, BiConsumer<MochaRequest, MochaResponse>> POST_ROUTES = new HashMap<>();
     protected static HashMap<String, BiConsumer<MochaRequest, MochaResponse>> PUT_ROUTES = new HashMap<>();
     protected static HashMap<String, BiConsumer<MochaRequest, MochaResponse>> DELETE_ROUTES = new HashMap<>();
+
+    /**
+     * Mocha Controllers
+     */
+    protected static ArrayList<Class<?>> controllers = new ArrayList<>();
+
+    protected static HashMap<String, ControllerRoute> get_routes = new HashMap<>();
+
+
+    public static void attach(Class<?> controller) {
+        controllers.add(controller);
+    }
+
 
     protected static String VIEWS_DIRECTORY = "";
     protected static String STATIC_DIRECTORY = "";
@@ -95,21 +114,41 @@ public class Mocha
      * Starts the Mocha web server at the given port and listens for new sockets.
      *
      * @param port Port for the server.
-     * @param callback Runnable callback that gets executed when the server starts
-     *                 listening for new sockets.
      */
-    public static void listen(int port, Runnable callback)
-    {
-        try
-        {
-            callback.run();
+    public static void listen(int port) {
+        try {
+            buildControllers();
             MochaListenerThread serverThread = new MochaListenerThread(port);
             serverThread.start();
-        }
-        catch(IOException e)
-        {
+        } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private static void buildControllers() {
+        System.out.println(controllers.size());
+        for (Class<?> controller : controllers) {
+            if (controller.isAnnotationPresent(Controller.class) && controller.isAnnotationPresent(Route.class)) {
+                System.out.println(true);
+                buildController(controller);
+            }
+        }
+    }
+
+    private static void buildController(Class<?> controller) {
+        try {
+            Route route = controller.getAnnotation(Route.class);
+            Object controllerInstance = controller.getDeclaredConstructor().newInstance();
+            System.out.println(route.value());
+            for (Method method : controller.getDeclaredMethods()) {
+                if (method.isAnnotationPresent(Get.class)) {
+                    get_routes.put(route.value(), new ControllerRoute(controllerInstance, method));
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
     }
 
     /**
