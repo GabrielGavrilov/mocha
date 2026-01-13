@@ -1,6 +1,5 @@
 package com.gabrielgavrilov.mocha;
 
-import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 import java.io.*;
@@ -213,13 +212,30 @@ public class MochaClient {
 
         if (Mocha.get_routes.get(route) != null) {
             ControllerRoute controllerRoute = Mocha.get_routes.get(route);
-            controllerRoute.controllerMethod.invoke(controllerRoute.controllerInstance);
+            Object value = controllerRoute.controllerMethod.invoke(controllerRoute.controllerInstance);
+            this.handleGetResponseTest(header, route, clientOutput, value);
         }
 
         else
         {
             handleRouteNotFoundRequest(clientOutput);
         }
+    }
+
+    private void handleGetResponseTest(String header, String route, OutputStream clientOutput, Object output) throws IOException
+    {
+        MochaRequest request = new MochaRequest();
+        MochaResponse response = new MochaResponse();
+        parseCookiesToHashMap(header);
+
+        request.cookie = parseCookiesToHashMap(header);
+        request.header = header;
+
+        response.initializeHeader("200 OK", "text/plain");
+        response.send((String)output);
+
+//        consume(Mocha.GET_ROUTES.get(route), request, response);
+        writeFullResponse(response, clientOutput);
     }
 
     /**
@@ -596,9 +612,9 @@ public class MochaClient {
         return payloadData;
     }
 
-    private JsonObject parsePayloadToJsonObject(String payload)
+    private String parsePayloadToJsonObject(String payload)
     {
-        return JsonParser.parseString(payload).getAsJsonObject();
+        return JsonParser.parseString(payload).getAsJsonObject().toString();
     }
 
     /**
@@ -672,6 +688,10 @@ public class MochaClient {
     private static void consume(BiConsumer<MochaRequest, MochaResponse> consumer, MochaRequest request, MochaResponse response)
     {
         consumer.accept(request, response);
+    }
+
+    private static void consumeTest(ControllerRoute route, MochaRequest request, MochaResponse response) {
+
     }
 
     /**

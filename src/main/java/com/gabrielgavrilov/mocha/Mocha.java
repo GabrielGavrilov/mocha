@@ -126,10 +126,8 @@ public class Mocha
     }
 
     private static void buildControllers() {
-        System.out.println(controllers.size());
         for (Class<?> controller : controllers) {
             if (controller.isAnnotationPresent(Controller.class) && controller.isAnnotationPresent(Route.class)) {
-                System.out.println(true);
                 buildController(controller);
             }
         }
@@ -139,10 +137,10 @@ public class Mocha
         try {
             Route route = controller.getAnnotation(Route.class);
             Object controllerInstance = controller.getDeclaredConstructor().newInstance();
-            System.out.println(route.value());
             for (Method method : controller.getDeclaredMethods()) {
                 if (method.isAnnotationPresent(Get.class)) {
-                    get_routes.put(route.value(), new ControllerRoute(controllerInstance, method));
+                    Get get = method.getAnnotation(Get.class);
+                    get_routes.put(route.value() + get.value(), new ControllerRoute(controllerInstance, method));
                 }
             }
         } catch (Exception e) {
