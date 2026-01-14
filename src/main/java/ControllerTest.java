@@ -11,4 +11,9 @@ public class ControllerTest {
         return new ModelTest("This is a test item", false);
     }
 
+    @Get("/{id}")
+    public String hello() {
+        return "This is a test item";
+    }
+
 }

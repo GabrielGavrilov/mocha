@@ -197,16 +197,25 @@ public class MochaClient {
      * @throws IOException
      */
     private void handleGetRequest(String header, String route, OutputStream clientOutput) throws InvocationTargetException, IllegalAccessException, IOException, RouteNotFoundException {
+        ControllerRoute fromParsedRoute = getControllerRouteFromParsedRoute(route, Mocha._GET_ROUTES);
+
+        if (fromParsedRoute != null) {
+            Object controllerMethod = fromParsedRoute.controllerMethod.invoke(fromParsedRoute.controllerInstance);
+            handleParsedGetResponse(header, route, clientOutput, controllerMethod);
+            return;
+        }
+
         if (Mocha._GET_ROUTES.get(route) != null) {
             ControllerRoute controllerRoute = Mocha._GET_ROUTES.get(route);
             Object value = controllerRoute.controllerMethod.invoke(controllerRoute.controllerInstance);
             handleGetResponse(header, route, clientOutput, value);
+            return;
         }
-        else
-            throw new RouteNotFoundException();
+
+        throw new RouteNotFoundException();
     }
 
-    private void handleGetResponse(String header, String route, OutputStream clientOutput, Object output) throws IOException
+    private void handleGetResponse(String header, String route, OutputStream clientOutput, Object methodOutput) throws IOException
     {
         MochaRequest request = new MochaRequest();
         MochaResponse response = new MochaResponse();
@@ -214,11 +223,29 @@ public class MochaClient {
         request.header = header;
 
         response.initializeHeader("200 OK", "application/json");
-        response.send(new Gson().toJson(output));
+        response.send(new Gson().toJson(methodOutput));
 
         writeFullResponse(response, clientOutput);
     }
 
+    private void handleParsedGetResponse(String header, String route, OutputStream clientOutput, Object methodOutput) throws IOException
+    {
+        MochaRequest request = new MochaRequest();
+        MochaResponse response = new MochaResponse();
+        MochaParser parser = new MochaParser(getTemplateFromParsedRoute(route, Mocha._GET_ROUTES), route);
+
+        request.parameter = parser.parse();
+        request.cookie = parseCookiesToHashMap(header);
+        request.header = header;
+
+        System.out.println(request.parameter.toString());
+
+        response.initializeHeader("200 OK", "application/json");
+        response.send(new Gson().toJson(request.parameter.get("id")));
+
+//        consume(consumer, request, response);
+        writeFullResponse(response, clientOutput);
+    }
 
     /**
      * Handles the POST request.
@@ -527,10 +554,21 @@ public class MochaClient {
      * @param hashMap Method hashmap.
      * @return MochaRequest and MochaResponse BiConsumer
      */
-    private BiConsumer<MochaRequest, MochaResponse> getBiConsumerFromParsedRoute(String route, HashMap<String, BiConsumer<MochaRequest, MochaResponse>> hashMap)
-    {
-        for(Map.Entry<String, BiConsumer<MochaRequest, MochaResponse>> entry : hashMap.entrySet())
-        {
+//    private BiConsumer<MochaRequest, MochaResponse> getBiConsumerFromParsedRoute(String route, HashMap<String, BiConsumer<MochaRequest, MochaResponse>> hashMap)
+//    {
+//        for(Map.Entry<String, BiConsumer<MochaRequest, MochaResponse>> entry : hashMap.entrySet())
+//        {
+//            MochaParser parser = new MochaParser(entry.getKey(), route);
+//            if(parser.isParsable())
+//                return entry.getValue();
+//        }
+//
+//        return null;
+//    }
+
+    private ControllerRoute getControllerRouteFromParsedRoute(String route, HashMap<String, ControllerRoute> routes) {
+
+        for (Map.Entry<String, ControllerRoute> entry : routes.entrySet()) {
             MochaParser parser = new MochaParser(entry.getKey(), route);
             if(parser.isParsable())
                 return entry.getValue();
@@ -546,9 +584,9 @@ public class MochaClient {
      * @param hashMap Method hashmap.
      * @return String
      */
-    private String getTemplateFromParsedRoute(String route, HashMap<String, BiConsumer<MochaRequest, MochaResponse>> hashMap)
+    private String getTemplateFromParsedRoute(String route, HashMap<String, ControllerRoute> hashMap)
     {
-        for(Map.Entry<String, BiConsumer<MochaRequest, MochaResponse>> entry : hashMap.entrySet())
+        for(Map.Entry<String, ControllerRoute> entry : hashMap.entrySet())
         {
             MochaParser parser = new MochaParser(entry.getKey(), route);
             if(parser.isParsable())
