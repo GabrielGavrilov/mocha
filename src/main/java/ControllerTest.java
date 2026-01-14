@@ -7,13 +7,8 @@ import com.gabrielgavrilov.mocha.annotations.Route;
 public class ControllerTest {
 
     @Get
-    public String hello() {
-        return "Hello, World!";
-    }
-
-    @Get("/goodbye")
-    public String goodbye() {
-        return "Goodbye, World!";
+    public ModelTest getModel() {
+        return new ModelTest("This is a test item", false);
     }
 
 }

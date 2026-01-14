@@ -47,18 +47,18 @@ public class MochaResponse
         appendEmpty();
     }
 
-    public void render(String fileName)
-    {
-        try
-        {
-            String fileContent = Files.readString(Paths.get(Mocha.VIEWS_DIRECTORY + fileName));
-            send(fileContent);
-        }
-        catch(IOException e)
-        {
-            e.printStackTrace();
-        }
-    }
+//    public void render(String fileName)
+//    {
+//        try
+//        {
+//            String fileContent = Files.readString(Paths.get(Mocha.VIEWS_DIRECTORY + fileName));
+//            send(fileContent);
+//        }
+//        catch(IOException e)
+//        {
+//            e.printStackTrace();
+//        }
+//    }
 
     private void appendEmpty()
     {

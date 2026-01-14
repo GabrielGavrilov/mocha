@@ -1,11 +1,10 @@
 package com.gabrielgavrilov.mocha;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonParser;
 
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
@@ -19,28 +18,29 @@ public class MochaClient {
      * @param clientInput Socket InputStream.
      * @param clientOutput Socket OutputStream.
      */
-    MochaClient(InputStream clientInput, OutputStream clientOutput)
-    {
-        try
-        {
+    MochaClient(InputStream clientInput, OutputStream clientOutput) {
+        try {
             InputStreamReader streamReader = new InputStreamReader(clientInput);
             BufferedReader buffReader = new BufferedReader(streamReader);
             StringBuilder clientHeader = new StringBuilder();
 
             String line;
-            while((line = buffReader.readLine()) != null && line.length() != 0)
-            {
-                clientHeader.append(line + "\r\n");
+            while((line = buffReader.readLine()) != null && !line.isEmpty()) {
+                clientHeader.append(line).append("\r\n");
             }
 
             String route = getRequestedRoute(clientHeader.toString());
             String method = getRequestedMethod(clientHeader.toString());
 
             handleRequest(clientHeader.toString(), route, method, clientOutput, buffReader);
-        }
-        catch (IOException | InvocationTargetException | IllegalAccessException e)
-        {
-            throw new RuntimeException(e);
+
+        /**
+         * Clean this up so users can throw custom errors
+          */
+        } catch (RouteNotFoundException e) {
+            this.handleRouteNotFoundRequest(clientOutput);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -54,29 +54,29 @@ public class MochaClient {
      * @param buffReader Buffered Reader
      * @throws IOException
      */
-    private void handleRequest(String header, String route, String method, OutputStream clientOutput, BufferedReader buffReader) throws IOException, InvocationTargetException, IllegalAccessException {
-        String type = checkForStaticRoute(route);
+    private void handleRequest(String header, String route, String method, OutputStream clientOutput, BufferedReader buffReader) throws IOException, RouteNotFoundException, InvocationTargetException, IllegalAccessException {
+//        String type = checkForStaticRoute(route);
 
-        if(type != null)
-        {
-            handleStaticRoute(route, type, clientOutput);
-            return;
-        }
+//        if(type != null)
+//        {
+//            handleStaticRoute(route, type, clientOutput);
+//            return;
+//        }
 
         switch(method)
         {
             case "GET":
                 handleGetRequest(header, route, clientOutput);
                 break;
-            case "POST":
-                handlePostRequest(header, route, clientOutput, buffReader);
-                break;
-            case "PUT":
-                handlePutRequest(header, route, clientOutput, buffReader);
-                break;
-            case "DELETE":
-                handleDeleteRequest(header, route, clientOutput, buffReader);
-                break;
+//            case "POST":
+//                handlePostRequest(header, route, clientOutput, buffReader);
+//                break;
+//            case "PUT":
+//                handlePutRequest(header, route, clientOutput, buffReader);
+//                break;
+//            case "DELETE":
+//                handleDeleteRequest(header, route, clientOutput, buffReader);
+//                break;
         }
     }
 
@@ -107,24 +107,24 @@ public class MochaClient {
      * @param clientOutput Client output stream.
      * @throws IOException
      */
-    private void handleStaticRoute(String route, String type, OutputStream clientOutput) throws IOException
-    {
-        switch(type)
-        {
-            case "css":
-                renderStaticFile("text/css", route, clientOutput);
-                break;
-            case "js":
-                renderStaticFile("text/javascript", route, clientOutput);
-                break;
-            case "png":
-                renderStaticImage("image/png", route, clientOutput);
-                break;
-            case "jpeg":
-                renderStaticImage("image/jpeg", route, clientOutput);
-                break;
-        }
-    }
+//    private void handleStaticRoute(String route, String type, OutputStream clientOutput) throws IOException
+//    {
+//        switch(type)
+//        {
+//            case "css":
+//                renderStaticFile("text/css", route, clientOutput);
+//                break;
+//            case "js":
+//                renderStaticFile("text/javascript", route, clientOutput);
+//                break;
+//            case "png":
+//                renderStaticImage("image/png", route, clientOutput);
+//                break;
+//            case "jpeg":
+//                renderStaticImage("image/jpeg", route, clientOutput);
+//                break;
+//        }
+//    }
 
     /**
      * Renders the static file.
@@ -134,19 +134,19 @@ public class MochaClient {
      * @param clientOutput Client output stream.
      * @throws IOException
      */
-    private void renderStaticFile(String contentType, String route, OutputStream clientOutput) throws IOException
-    {
-        String file = route.substring(1);
-        MochaResponse response = new MochaResponse();
-        String fileContent = Files.readString(Paths.get(Mocha.STATIC_DIRECTORY + file));
-
-        response.initializeHeader("200 OK", contentType);
-
-        clientOutput.write(response.header.toString().getBytes());
-        clientOutput.write("\r\n".getBytes());
-        clientOutput.write(fileContent.getBytes());
-        clientOutput.flush();
-    }
+//    private void renderStaticFile(String contentType, String route, OutputStream clientOutput) throws IOException
+//    {
+//        String file = route.substring(1);
+//        MochaResponse response = new MochaResponse();
+//        String fileContent = Files.readString(Paths.get(Mocha.STATIC_DIRECTORY + file));
+//
+//        response.initializeHeader("200 OK", contentType);
+//
+//        clientOutput.write(response.header.toString().getBytes());
+//        clientOutput.write("\r\n".getBytes());
+//        clientOutput.write(fileContent.getBytes());
+//        clientOutput.flush();
+//    }
 
     /**
      * Renders the static image.
@@ -156,37 +156,37 @@ public class MochaClient {
      * @param clientOutput Client output stream.
      * @throws IOException
      */
-    private void renderStaticImage(String contentType, String route, OutputStream clientOutput) throws IOException
-    {
-        String file = route.substring(1);
-        MochaResponse response = new MochaResponse();
-
-        response.initializeHeader("200 OK", contentType);
-
-        clientOutput.write(response.header.toString().getBytes());
-        clientOutput.write("\r\n".getBytes());
-
-        try
-        {
-            FileInputStream content = new FileInputStream(Mocha.STATIC_DIRECTORY + file);
-
-            int i = 0;
-            while((i = content.read()) != -1)
-            {
-                clientOutput.write(i);
-            }
-
-            content.close();
-        }
-        catch(IOException e)
-        {
-            e.printStackTrace();
-        }
-        finally
-        {
-            clientOutput.flush();
-        }
-    }
+//    private void renderStaticImage(String contentType, String route, OutputStream clientOutput) throws IOException
+//    {
+//        String file = route.substring(1);
+//        MochaResponse response = new MochaResponse();
+//
+//        response.initializeHeader("200 OK", contentType);
+//
+//        clientOutput.write(response.header.toString().getBytes());
+//        clientOutput.write("\r\n".getBytes());
+//
+//        try
+//        {
+//            FileInputStream content = new FileInputStream(Mocha.STATIC_DIRECTORY + file);
+//
+//            int i = 0;
+//            while((i = content.read()) != -1)
+//            {
+//                clientOutput.write(i);
+//            }
+//
+//            content.close();
+//        }
+//        catch(IOException e)
+//        {
+//            e.printStackTrace();
+//        }
+//        finally
+//        {
+//            clientOutput.flush();
+//        }
+//    }
 
     /**
      * Handles the GET request.
@@ -196,47 +196,29 @@ public class MochaClient {
      * @param clientOutput Client output stream.
      * @throws IOException
      */
-    private void handleGetRequest(String header, String route, OutputStream clientOutput) throws IOException, InvocationTargetException, IllegalAccessException {
-        BiConsumer<MochaRequest, MochaResponse> consumerResponse = getBiConsumerFromParsedRoute(route, Mocha.GET_ROUTES);
-
-        if(consumerResponse != null)
-        {
-            handleParsedGetResponse(header, consumerResponse, route, clientOutput);
-            return;
-        }
-
-//        if(Mocha.GET_ROUTES.get(route) != null)
-//        {
-//            handleGetResponse(header, route, clientOutput);
-//        }
-
-        if (Mocha.get_routes.get(route) != null) {
-            ControllerRoute controllerRoute = Mocha.get_routes.get(route);
+    private void handleGetRequest(String header, String route, OutputStream clientOutput) throws InvocationTargetException, IllegalAccessException, IOException, RouteNotFoundException {
+        if (Mocha._GET_ROUTES.get(route) != null) {
+            ControllerRoute controllerRoute = Mocha._GET_ROUTES.get(route);
             Object value = controllerRoute.controllerMethod.invoke(controllerRoute.controllerInstance);
-            this.handleGetResponseTest(header, route, clientOutput, value);
+            handleGetResponse(header, route, clientOutput, value);
         }
-
         else
-        {
-            handleRouteNotFoundRequest(clientOutput);
-        }
+            throw new RouteNotFoundException();
     }
 
-    private void handleGetResponseTest(String header, String route, OutputStream clientOutput, Object output) throws IOException
+    private void handleGetResponse(String header, String route, OutputStream clientOutput, Object output) throws IOException
     {
         MochaRequest request = new MochaRequest();
         MochaResponse response = new MochaResponse();
-        parseCookiesToHashMap(header);
 
-        request.cookie = parseCookiesToHashMap(header);
         request.header = header;
 
-        response.initializeHeader("200 OK", "text/plain");
-        response.send((String)output);
+        response.initializeHeader("200 OK", "application/json");
+        response.send(new Gson().toJson(output));
 
-//        consume(Mocha.GET_ROUTES.get(route), request, response);
         writeFullResponse(response, clientOutput);
     }
+
 
     /**
      * Handles the POST request.
@@ -247,31 +229,31 @@ public class MochaClient {
      * @param buffReader Buffered reader.
      * @throws IOException
      */
-    private void handlePostRequest(String header, String route, OutputStream clientOutput, BufferedReader buffReader) throws IOException
-    {
-        StringBuilder payload = new StringBuilder();
-        BiConsumer<MochaRequest, MochaResponse> consumerResponse = getBiConsumerFromParsedRoute(route, Mocha.POST_ROUTES);
-
-        while(buffReader.ready())
-        {
-            payload.append((char)buffReader.read());
-        }
-
-        if(consumerResponse != null)
-        {
-            handleParsedPostResponse(header, consumerResponse, route, clientOutput, payload.toString());
-            return;
-        }
-
-        if(Mocha.POST_ROUTES.get(route) != null)
-        {
-            handlePostResponse(header, route, clientOutput, payload.toString());
-        }
-
-        else
-        {
-            handleRouteNotFoundRequest(clientOutput);
-        }
+    private void handlePostRequest(String header, String route, OutputStream clientOutput, BufferedReader buffReader) throws RouteNotFoundException {
+//        StringBuilder payload = new StringBuilder();
+//        BiConsumer<MochaRequest, MochaResponse> consumerResponse = getBiConsumerFromParsedRoute(route, Mocha.POST_ROUTES);
+//
+//        while(buffReader.ready())
+//        {
+//            payload.append((char)buffReader.read());
+//        }
+//
+//        if(consumerResponse != null)
+//        {
+//            handleParsedPostResponse(header, consumerResponse, route, clientOutput, payload.toString());
+//            return;
+//        }
+//
+//        if(Mocha.POST_ROUTES.get(route) != null)
+//        {
+//            handlePostResponse(header, route, clientOutput, payload.toString());
+//        }
+//
+//        else
+//        {
+//            handleRouteNotFoundRequest(clientOutput);
+//        }
+        throw new RouteNotFoundException();
     }
 
     /**
@@ -283,32 +265,32 @@ public class MochaClient {
      * @param buffReader Buffered reader.
      * @throws IOException
      */
-    private void handlePutRequest(String header, String route, OutputStream clientOutput, BufferedReader buffReader) throws IOException
-    {
-        StringBuilder payload = new StringBuilder();
-        BiConsumer<MochaRequest, MochaResponse> consumerResponse = getBiConsumerFromParsedRoute(route, Mocha.PUT_ROUTES);
-
-        while(buffReader.ready())
-        {
-            payload.append((char)buffReader.read());
-        }
-
-        if(consumerResponse != null)
-        {
-            handleParsedPutResponse(header, consumerResponse, route, clientOutput, payload.toString());
-            return;
-        }
-
-        if(Mocha.PUT_ROUTES.get(route) != null)
-        {
-            handlePutResponse(header, route, clientOutput, payload.toString());
-        }
-
-        else
-        {
-            handleRouteNotFoundRequest(clientOutput);
-        }
-    }
+//    private void handlePutRequest(String header, String route, OutputStream clientOutput, BufferedReader buffReader) throws IOException
+//    {
+//        StringBuilder payload = new StringBuilder();
+//        BiConsumer<MochaRequest, MochaResponse> consumerResponse = getBiConsumerFromParsedRoute(route, Mocha.PUT_ROUTES);
+//
+//        while(buffReader.ready())
+//        {
+//            payload.append((char)buffReader.read());
+//        }
+//
+//        if(consumerResponse != null)
+//        {
+//            handleParsedPutResponse(header, consumerResponse, route, clientOutput, payload.toString());
+//            return;
+//        }
+//
+//        if(Mocha.PUT_ROUTES.get(route) != null)
+//        {
+//            handlePutResponse(header, route, clientOutput, payload.toString());
+//        }
+//
+//        else
+//        {
+//            handleRouteNotFoundRequest(clientOutput);
+//        }
+//    }
 
     /**
      * Handles the DELETE request.
@@ -319,32 +301,32 @@ public class MochaClient {
      * @param buffReader Buffered reader.
      * @throws IOException
      */
-    private void handleDeleteRequest(String header, String route, OutputStream clientOutput, BufferedReader buffReader) throws IOException
-    {
-        StringBuilder payload = new StringBuilder();
-        BiConsumer<MochaRequest, MochaResponse> consumerResponse = getBiConsumerFromParsedRoute(route, Mocha.DELETE_ROUTES);
-
-        while(buffReader.ready())
-        {
-            payload.append((char)buffReader.read());
-        }
-
-        if(consumerResponse != null)
-        {
-            handleParsedDeleteResponse(header, consumerResponse, route, clientOutput, payload.toString());
-            return;
-        }
-
-        if(Mocha.DELETE_ROUTES.get(route) != null)
-        {
-            handleDeleteResponse(header, route, clientOutput, payload.toString());
-        }
-
-        else
-        {
-            handleRouteNotFoundRequest(clientOutput);
-        }
-    }
+//    private void handleDeleteRequest(String header, String route, OutputStream clientOutput, BufferedReader buffReader) throws IOException
+//    {
+//        StringBuilder payload = new StringBuilder();
+//        BiConsumer<MochaRequest, MochaResponse> consumerResponse = getBiConsumerFromParsedRoute(route, Mocha.DELETE_ROUTES);
+//
+//        while(buffReader.ready())
+//        {
+//            payload.append((char)buffReader.read());
+//        }
+//
+//        if(consumerResponse != null)
+//        {
+//            handleParsedDeleteResponse(header, consumerResponse, route, clientOutput, payload.toString());
+//            return;
+//        }
+//
+//        if(Mocha.DELETE_ROUTES.get(route) != null)
+//        {
+//            handleDeleteResponse(header, route, clientOutput, payload.toString());
+//        }
+//
+//        else
+//        {
+//            handleRouteNotFoundRequest(clientOutput);
+//        }
+//    }
 
 
     /**
@@ -355,18 +337,18 @@ public class MochaClient {
      * @param clientOutput Client output stream.
      * @throws IOException
      */
-    private void handleGetResponse(String header, String route, OutputStream clientOutput) throws IOException
-    {
-        MochaRequest request = new MochaRequest();
-        MochaResponse response = new MochaResponse();
-        parseCookiesToHashMap(header);
-
-        request.cookie = parseCookiesToHashMap(header);
-        request.header = header;
-
-        consume(Mocha.GET_ROUTES.get(route), request, response);
-        writeFullResponse(response, clientOutput);
-    }
+//    private void handleGetResponse(String header, String route, OutputStream clientOutput) throws IOException
+//    {
+//        MochaRequest request = new MochaRequest();
+//        MochaResponse response = new MochaResponse();
+//        parseCookiesToHashMap(header);
+//
+//        request.cookie = parseCookiesToHashMap(header);
+//        request.header = header;
+//
+//        consume(Mocha.GET_ROUTES.get(route), request, response);
+//        writeFullResponse(response, clientOutput);
+//    }
 
     /**
      * Handles the POST response.
@@ -377,19 +359,19 @@ public class MochaClient {
      * @param payload Post payload.
      * @throws IOException
      */
-    private void handlePostResponse(String header, String route, OutputStream clientOutput, String payload) throws IOException
-    {
-        MochaRequest request = new MochaRequest();
-        MochaResponse response = new MochaResponse();
-
-        parsePayload(header, payload, request);
-
-        request.cookie = parseCookiesToHashMap(header);
-        request.header = header;
-
-        consume(Mocha.POST_ROUTES.get(route), request, response);
-        writeFullResponse(response, clientOutput);
-    }
+//    private void handlePostResponse(String header, String route, OutputStream clientOutput, String payload) throws IOException
+//    {
+//        MochaRequest request = new MochaRequest();
+//        MochaResponse response = new MochaResponse();
+//
+//        parsePayload(header, payload, request);
+//
+//        request.cookie = parseCookiesToHashMap(header);
+//        request.header = header;
+//
+//        consume(Mocha.POST_ROUTES.get(route), request, response);
+//        writeFullResponse(response, clientOutput);
+//    }
 
     /**
      * Handles the PUT response.
@@ -400,19 +382,19 @@ public class MochaClient {
      * @param payload Put payload.
      * @throws IOException
      */
-    private void handlePutResponse(String header, String route, OutputStream clientOutput, String payload) throws IOException
-    {
-        MochaRequest request = new MochaRequest();
-        MochaResponse response = new MochaResponse();
-
-        parsePayload(header, payload, request);
-
-        request.cookie = parseCookiesToHashMap(header);
-        request.header = header;
-
-        consume(Mocha.PUT_ROUTES.get(route), request, response);
-        writeFullResponse(response, clientOutput);
-    }
+//    private void handlePutResponse(String header, String route, OutputStream clientOutput, String payload) throws IOException
+//    {
+//        MochaRequest request = new MochaRequest();
+//        MochaResponse response = new MochaResponse();
+//
+//        parsePayload(header, payload, request);
+//
+//        request.cookie = parseCookiesToHashMap(header);
+//        request.header = header;
+//
+//        consume(Mocha.PUT_ROUTES.get(route), request, response);
+//        writeFullResponse(response, clientOutput);
+//    }
 
     /**
      * Handles the DELETE response.
@@ -423,19 +405,19 @@ public class MochaClient {
      * @param payload Delete payload.
      * @throws IOException
      */
-    private void handleDeleteResponse(String header, String route, OutputStream clientOutput, String payload) throws IOException
-    {
-        MochaRequest request = new MochaRequest();
-        MochaResponse response = new MochaResponse();
-
-        parsePayload(header, payload, request);
-
-        request.cookie = parseCookiesToHashMap(header);
-        request.header = header;
-
-        consume(Mocha.DELETE_ROUTES.get(route), request, response);
-        writeFullResponse(response, clientOutput);
-    }
+//    private void handleDeleteResponse(String header, String route, OutputStream clientOutput, String payload) throws IOException
+//    {
+//        MochaRequest request = new MochaRequest();
+//        MochaResponse response = new MochaResponse();
+//
+//        parsePayload(header, payload, request);
+//
+//        request.cookie = parseCookiesToHashMap(header);
+//        request.header = header;
+//
+//        consume(Mocha.DELETE_ROUTES.get(route), request, response);
+//        writeFullResponse(response, clientOutput);
+//    }
 
     /**
      * Handles the parsed GET response.
@@ -446,19 +428,19 @@ public class MochaClient {
      * @param clientOutput Client output stream.
      * @throws IOException
      */
-    private void handleParsedGetResponse(String header, BiConsumer<MochaRequest, MochaResponse> consumer, String route, OutputStream clientOutput) throws IOException
-    {
-        MochaRequest request = new MochaRequest();
-        MochaResponse response = new MochaResponse();
-        MochaParser parser = new MochaParser(getTemplateFromParsedRoute(route, Mocha.GET_ROUTES), route);
-
-        request.parameter = parser.parse();
-        request.cookie = parseCookiesToHashMap(header);
-        request.header = header;
-
-        consume(consumer, request, response);
-        writeFullResponse(response, clientOutput);
-    }
+//    private void handleParsedGetResponse(String header, BiConsumer<MochaRequest, MochaResponse> consumer, String route, OutputStream clientOutput) throws IOException
+//    {
+//        MochaRequest request = new MochaRequest();
+//        MochaResponse response = new MochaResponse();
+//        MochaParser parser = new MochaParser(getTemplateFromParsedRoute(route, Mocha.GET_ROUTES), route);
+//
+//        request.parameter = parser.parse();
+//        request.cookie = parseCookiesToHashMap(header);
+//        request.header = header;
+//
+//        consume(consumer, request, response);
+//        writeFullResponse(response, clientOutput);
+//    }
 
     /**
      * Handles the parsed POST response.
@@ -470,21 +452,21 @@ public class MochaClient {
      * @param payload POST payload.
      * @throws IOException
      */
-    private void handleParsedPostResponse(String header, BiConsumer<MochaRequest, MochaResponse> consumer, String route, OutputStream clientOutput, String payload) throws IOException
-    {
-        MochaRequest request = new MochaRequest();
-        MochaResponse response = new MochaResponse();
-        MochaParser parser = new MochaParser(getTemplateFromParsedRoute(route, Mocha.POST_ROUTES), route);
-
-        parsePayload(header, payload, request);
-
-        request.parameter = parser.parse();
-        request.cookie = parseCookiesToHashMap(header);
-        request.header = header;
-
-        consume(consumer, request, response);
-        writeFullResponse(response, clientOutput);
-    }
+//    private void handleParsedPostResponse(String header, BiConsumer<MochaRequest, MochaResponse> consumer, String route, OutputStream clientOutput, String payload) throws IOException
+//    {
+//        MochaRequest request = new MochaRequest();
+//        MochaResponse response = new MochaResponse();
+//        MochaParser parser = new MochaParser(getTemplateFromParsedRoute(route, Mocha.POST_ROUTES), route);
+//
+//        parsePayload(header, payload, request);
+//
+//        request.parameter = parser.parse();
+//        request.cookie = parseCookiesToHashMap(header);
+//        request.header = header;
+//
+//        consume(consumer, request, response);
+//        writeFullResponse(response, clientOutput);
+//    }
 
     /**
      * Handles the parsed PUT response.
@@ -496,21 +478,21 @@ public class MochaClient {
      * @param payload POST payload.
      * @throws IOException
      */
-    private void handleParsedPutResponse(String header, BiConsumer<MochaRequest, MochaResponse> consumer, String route, OutputStream clientOutput, String payload) throws IOException
-    {
-        MochaRequest request = new MochaRequest();
-        MochaResponse response = new MochaResponse();
-        MochaParser parser = new MochaParser(getTemplateFromParsedRoute(route, Mocha.PUT_ROUTES), route);
-
-        parsePayload(header, payload, request);
-
-        request.parameter = parser.parse();
-        request.cookie = parseCookiesToHashMap(header);
-        request.header = header;
-
-        consume(consumer, request, response);
-        writeFullResponse(response, clientOutput);
-    }
+//    private void handleParsedPutResponse(String header, BiConsumer<MochaRequest, MochaResponse> consumer, String route, OutputStream clientOutput, String payload) throws IOException
+//    {
+//        MochaRequest request = new MochaRequest();
+//        MochaResponse response = new MochaResponse();
+//        MochaParser parser = new MochaParser(getTemplateFromParsedRoute(route, Mocha.PUT_ROUTES), route);
+//
+//        parsePayload(header, payload, request);
+//
+//        request.parameter = parser.parse();
+//        request.cookie = parseCookiesToHashMap(header);
+//        request.header = header;
+//
+//        consume(consumer, request, response);
+//        writeFullResponse(response, clientOutput);
+//    }
 
     /**
      * Handles the parsed DELETE response.
@@ -522,21 +504,21 @@ public class MochaClient {
      * @param payload POST Payload.
      * @throws IOException
      */
-    private void handleParsedDeleteResponse(String header, BiConsumer<MochaRequest, MochaResponse> consumer, String route, OutputStream clientOutput, String payload) throws IOException
-    {
-        MochaRequest request = new MochaRequest();
-        MochaResponse response = new MochaResponse();
-        MochaParser parser = new MochaParser(getTemplateFromParsedRoute(route, Mocha.DELETE_ROUTES), route);
-
-        parsePayload(header, payload, request);
-
-        request.parameter = parser.parse();
-        request.cookie = parseCookiesToHashMap(header);
-        request.header = header;
-
-        consume(consumer, request, response);
-        writeFullResponse(response, clientOutput);
-    }
+//    private void handleParsedDeleteResponse(String header, BiConsumer<MochaRequest, MochaResponse> consumer, String route, OutputStream clientOutput, String payload) throws IOException
+//    {
+//        MochaRequest request = new MochaRequest();
+//        MochaResponse response = new MochaResponse();
+//        MochaParser parser = new MochaParser(getTemplateFromParsedRoute(route, Mocha.DELETE_ROUTES), route);
+//
+//        parsePayload(header, payload, request);
+//
+//        request.parameter = parser.parse();
+//        request.cookie = parseCookiesToHashMap(header);
+//        request.header = header;
+//
+//        consume(consumer, request, response);
+//        writeFullResponse(response, clientOutput);
+//    }
 
     /**
      * Returns the BiConsumer from the parsed route.
@@ -657,24 +639,23 @@ public class MochaClient {
      * @param clientOutput Client output stream.
      * @throws IOException
      */
-    private void handleRouteNotFoundRequest(OutputStream clientOutput) throws IOException
-    {
-        for(Map.Entry<String, BiConsumer<MochaRequest, MochaResponse>> entry : Mocha.GET_ROUTES.entrySet())
-        {
-            if(entry.getKey().equals("*"))
-            {
-                MochaRequest request = new MochaRequest();
-                MochaResponse response = new MochaResponse();
-                BiConsumer<MochaRequest, MochaResponse> callback = entry.getValue();
-
-                consume(callback, request, response);
-                writeFullResponse(response, clientOutput);
-                return;
-            }
-        }
+    private void handleRouteNotFoundRequest(OutputStream clientOutput) {
+//        for(Map.Entry<String, BiConsumer<MochaRequest, MochaResponse>> entry : Mocha.GET_ROUTES.entrySet())
+//        {
+//            if(entry.getKey().equals("*"))
+//            {
+//                MochaRequest request = new MochaRequest();
+//                MochaResponse response = new MochaResponse();
+//                BiConsumer<MochaRequest, MochaResponse> callback = entry.getValue();
+//
+//                consume(callback, request, response);
+//                writeFullResponse(response, clientOutput);
+//                return;
+//            }
+//        }
 
         MochaResponse response = new MochaResponse();
-        response.status("404 Not Found");
+        response.initializeHeader("404 Not Found", "application/json");
         writeFullResponse(response, clientOutput);
     }
 
@@ -685,14 +666,11 @@ public class MochaClient {
      * @param request Mocha request.
      * @param response Mocha response.
      */
-    private static void consume(BiConsumer<MochaRequest, MochaResponse> consumer, MochaRequest request, MochaResponse response)
-    {
-        consumer.accept(request, response);
-    }
+//    private static void consume(BiConsumer<MochaRequest, MochaResponse> consumer, MochaRequest request, MochaResponse response)
+//    {
+//        consumer.accept(request, response);
+//    }
 
-    private static void consumeTest(ControllerRoute route, MochaRequest request, MochaResponse response) {
-
-    }
 
     /**
      * Returns the requested route.
@@ -726,10 +704,14 @@ public class MochaClient {
         return clientHeader.split("\r\n")[1].split(": ")[1];
     }
 
-    private static void writeFullResponse(MochaResponse response, OutputStream clientOutput) throws IOException {
-        clientOutput.write(response.header.toString().getBytes());
-//        clientOutput.write("\r\n".getBytes());
-        clientOutput.write(response.body.toString().getBytes());
-        clientOutput.flush();
+    private static void writeFullResponse(MochaResponse response, OutputStream clientOutput) {
+        try {
+            clientOutput.write(response.header.toString().getBytes());
+            clientOutput.write(response.body.toString().getBytes());
+            clientOutput.flush();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
+
 }
