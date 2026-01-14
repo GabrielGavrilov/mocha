@@ -1,5 +1,6 @@
 import com.gabrielgavrilov.mocha.annotations.Controller;
 import com.gabrielgavrilov.mocha.annotations.Get;
+import com.gabrielgavrilov.mocha.annotations.Param;
 import com.gabrielgavrilov.mocha.annotations.Route;
 
 @Controller
@@ -12,8 +13,8 @@ public class ControllerTest {
     }
 
     @Get("/{id}")
-    public String hello() {
-        return "This is a test item";
+    public ModelTest hello(@Param String id) {
+        return new ModelTest(id, false);
     }
 
 }

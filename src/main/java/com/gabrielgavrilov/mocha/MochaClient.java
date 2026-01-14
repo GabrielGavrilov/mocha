@@ -200,8 +200,7 @@ public class MochaClient {
         ControllerRoute fromParsedRoute = getControllerRouteFromParsedRoute(route, Mocha._GET_ROUTES);
 
         if (fromParsedRoute != null) {
-            Object controllerMethod = fromParsedRoute.controllerMethod.invoke(fromParsedRoute.controllerInstance);
-            handleParsedGetResponse(header, route, clientOutput, controllerMethod);
+            handleParsedGetResponse(header, route, fromParsedRoute, clientOutput);
             return;
         }
 
@@ -228,8 +227,7 @@ public class MochaClient {
         writeFullResponse(response, clientOutput);
     }
 
-    private void handleParsedGetResponse(String header, String route, OutputStream clientOutput, Object methodOutput) throws IOException
-    {
+    private void handleParsedGetResponse(String header, String route, ControllerRoute controllerRoute, OutputStream clientOutput) throws IOException, InvocationTargetException, IllegalAccessException {
         MochaRequest request = new MochaRequest();
         MochaResponse response = new MochaResponse();
         MochaParser parser = new MochaParser(getTemplateFromParsedRoute(route, Mocha._GET_ROUTES), route);
@@ -241,7 +239,7 @@ public class MochaClient {
         System.out.println(request.parameter.toString());
 
         response.initializeHeader("200 OK", "application/json");
-        response.send(new Gson().toJson(request.parameter.get("id")));
+        response.send(new Gson().toJson(controllerRoute.controllerMethod.invoke(controllerRoute.controllerInstance, "I am injected")));
 
 //        consume(consumer, request, response);
         writeFullResponse(response, clientOutput);
