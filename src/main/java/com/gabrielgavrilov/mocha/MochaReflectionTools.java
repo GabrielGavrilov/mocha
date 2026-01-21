@@ -1,4 +1,4 @@
 package com.gabrielgavrilov.mocha;
 
-public class ControllerBuilder {
+public class MochaReflectionTools {
 }

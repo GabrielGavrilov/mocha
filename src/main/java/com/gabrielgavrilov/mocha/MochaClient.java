@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonParser;
 
 import java.io.*;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.Map;
@@ -236,13 +237,20 @@ public class MochaClient {
         request.cookie = parseCookiesToHashMap(header);
         request.header = header;
 
-        System.out.println(request.parameter.toString());
-
         response.initializeHeader("200 OK", "application/json");
-        response.send(new Gson().toJson(controllerRoute.controllerMethod.invoke(controllerRoute.controllerInstance, "I am injected")));
+
+        response.send(new Gson().toJson(controllerRoute.controllerMethod.invoke(controllerRoute.controllerInstance, request.parameter.values().toArray())));
 
 //        consume(consumer, request, response);
         writeFullResponse(response, clientOutput);
+    }
+
+    private void hydrate( HashMap<String, String> parameters, Object instance) {
+        Class<?> objectClass = instance.getClass();
+        Field[] fields = objectClass.getDeclaredFields();
+        for (Field field : fields) {
+
+        }
     }
 
     /**
@@ -549,7 +557,6 @@ public class MochaClient {
      * Returns the BiConsumer from the parsed route.
      *
      * @param route Requested route.
-     * @param hashMap Method hashmap.
      * @return MochaRequest and MochaResponse BiConsumer
      */
 //    private BiConsumer<MochaRequest, MochaResponse> getBiConsumerFromParsedRoute(String route, HashMap<String, BiConsumer<MochaRequest, MochaResponse>> hashMap)
@@ -565,7 +572,6 @@ public class MochaClient {
 //    }
 
     private ControllerRoute getControllerRouteFromParsedRoute(String route, HashMap<String, ControllerRoute> routes) {
-
         for (Map.Entry<String, ControllerRoute> entry : routes.entrySet()) {
             MochaParser parser = new MochaParser(entry.getKey(), route);
             if(parser.isParsable())

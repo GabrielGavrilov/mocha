@@ -12,9 +12,9 @@ public class ControllerTest {
         return new ModelTest("This is a test item", false);
     }
 
-    @Get("/{id}")
-    public ModelTest hello(@Param String id) {
-        return new ModelTest(id, false);
+    @Get("/{id}/{completed}")
+    public ModelTest hello(@Param String id, @Param boolean completed) {
+        return new ModelTest(id, completed);
     }
 
 }

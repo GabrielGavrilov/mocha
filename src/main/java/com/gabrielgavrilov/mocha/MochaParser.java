@@ -5,8 +5,7 @@ import java.util.HashMap;
 public class MochaParser {
 
     private HashMap<String, String> parserData = new HashMap<>();
-    private String format;
-    private String parsedFormat;
+    private String[] templateSplit, textSplit;
 
     /**
      * Constructor for the MochaParser class. Used to parse template routes into a HashMap.
@@ -16,8 +15,8 @@ public class MochaParser {
      */
     public MochaParser(String template, String text) {
         try {
-            String[] templateSplit = template.split("/");
-            String[] textSplit = text.split("/");
+            this.templateSplit = template.split("/");
+            this.textSplit = text.split("/");
 
             for (int i = 0; i < templateSplit.length; i++) {
                 if (templateSplit[i].contains("{") && templateSplit[i].contains("}")) {
@@ -37,9 +36,22 @@ public class MochaParser {
      */
     public boolean isParsable()
     {
-        if(parserData.isEmpty())
+        boolean hasTemplate = false;
+
+        if (this.templateSplit.length != this.textSplit.length)
             return false;
-        return true;
+
+        for (int i = 0; i < this.templateSplit.length; i++) {
+            if (this.templateSplit[i].contains("{") && this.templateSplit[i].contains("}")) {
+                hasTemplate = true;
+                continue;
+            }
+
+            if (!templateSplit[i].equals(this.textSplit[i]))
+                hasTemplate = false;
+        }
+
+        return hasTemplate;
     }
 
     /**
