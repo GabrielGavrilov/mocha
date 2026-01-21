@@ -67,7 +67,7 @@ public class MochaClient {
         switch(method)
         {
             case "GET":
-                handleGetRequest(header, route, clientOutput);
+                handleGetRequest(header, route, clientOutput, buffReader);
                 break;
 //            case "POST":
 //                handlePostRequest(header, route, clientOutput, buffReader);
@@ -197,11 +197,16 @@ public class MochaClient {
      * @param clientOutput Client output stream.
      * @throws IOException
      */
-    private void handleGetRequest(String header, String route, OutputStream clientOutput) throws InvocationTargetException, IllegalAccessException, IOException, RouteNotFoundException {
+    private void handleGetRequest(String header, String route, OutputStream clientOutput, BufferedReader buffReader) throws InvocationTargetException, IllegalAccessException, IOException, RouteNotFoundException {
         ControllerRoute fromParsedRoute = getControllerRouteFromParsedRoute(route, Mocha._GET_ROUTES);
+        StringBuilder payload = new StringBuilder();
+
+        while(buffReader.ready()) {
+            payload.append((char)buffReader.read());
+        }
 
         if (fromParsedRoute != null) {
-            handleParsedGetResponse(header, route, fromParsedRoute, clientOutput);
+            handleParsedGetResponse(header, route, fromParsedRoute, clientOutput, payload.toString());
             return;
         }
 
@@ -228,10 +233,12 @@ public class MochaClient {
         writeFullResponse(response, clientOutput);
     }
 
-    private void handleParsedGetResponse(String header, String route, ControllerRoute controllerRoute, OutputStream clientOutput) throws IOException, InvocationTargetException, IllegalAccessException {
+    private void handleParsedGetResponse(String header, String route, ControllerRoute controllerRoute, OutputStream clientOutput, String payload) throws IOException, InvocationTargetException, IllegalAccessException {
         MochaRequest request = new MochaRequest();
         MochaResponse response = new MochaResponse();
         MochaParser parser = new MochaParser(getTemplateFromParsedRoute(route, Mocha._GET_ROUTES), route);
+
+        parsePayload(header, payload, request);
 
         request.parameter = parser.parse();
         request.cookie = parseCookiesToHashMap(header);
@@ -245,13 +252,13 @@ public class MochaClient {
         writeFullResponse(response, clientOutput);
     }
 
-    private void hydrate( HashMap<String, String> parameters, Object instance) {
-        Class<?> objectClass = instance.getClass();
-        Field[] fields = objectClass.getDeclaredFields();
-        for (Field field : fields) {
-
-        }
-    }
+//    private void hydrate( HashMap<String, String> parameters, Object instance) {
+//        Class<?> objectClass = instance.getClass();
+//        Field[] fields = objectClass.getDeclaredFields();
+//        for (Field field : fields) {
+//
+//        }
+//    }
 
     /**
      * Handles the POST request.

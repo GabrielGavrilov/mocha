@@ -37,7 +37,6 @@ public class MochaParser {
     public boolean isParsable()
     {
         boolean hasTemplate = false;
-
         if (this.templateSplit.length != this.textSplit.length)
             return false;
 
@@ -48,10 +47,10 @@ public class MochaParser {
             }
 
             if (!templateSplit[i].equals(this.textSplit[i]))
-                hasTemplate = false;
+                return false;
         }
 
-        return hasTemplate;
+        return true;
     }
 
     /**

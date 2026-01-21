@@ -3,6 +3,7 @@ package com.gabrielgavrilov.mocha;
 import com.google.gson.JsonObject;
 
 import java.util.HashMap;
+import java.util.Objects;
 
 public class MochaRequest<T>
 {

@@ -9,6 +9,7 @@ public class MochaPayload<T>
     private T PAYLOAD;
 
     public MochaPayload(T payload) {
+        System.out.println(payload.toString());
         this.PAYLOAD = payload;
     }
 
