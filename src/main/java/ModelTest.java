@@ -15,4 +15,9 @@ public class ModelTest {
         this.completed = false;
     }
 
+    @Override
+    public String toString() {
+        return item + " " + completed;
+    }
+
 }

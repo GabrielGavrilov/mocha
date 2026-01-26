@@ -1,5 +1,7 @@
 package com.gabrielgavrilov.mocha;
 
+import com.gabrielgavrilov.mocha.annotations.Body;
+import com.gabrielgavrilov.mocha.annotations.Param;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -8,6 +10,7 @@ import java.io.*;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -133,13 +136,50 @@ public class MochaClient {
 
         response.initializeHeader("200 OK", "application/json");
 
+        Object[] args = toVarargs(
+                test(request, controllerRoute.controllerMethod),
+                test2(request, controllerRoute.controllerMethod)
+        ).toArray();
+
+        for (Object arg : args) {
+            System.out.println(arg);
+        }
+
         response.send(new Gson().toJson(controllerRoute.controllerMethod.invoke(
-                controllerRoute.controllerInstance, request.parameter.get("id"),
-                request.payload
+                controllerRoute.controllerInstance,
+                args
         )));
 
-//        consume(consumer, request, response);
         writeFullResponse(response, clientOutput);
+    }
+
+    // TODO: rename
+    private ArrayList<String> test(MochaRequest request, Method controllerMethod) {
+        ArrayList<String> result = new ArrayList<>();
+        ArrayList<Parameter> param = MochaReflectionTools.getAllParametersWithAnnotation(Param.class, controllerMethod);
+        for (Parameter parameter : param) {
+            System.out.println("Got " + parameter.getName());
+            result.add((String) request.parameter.get(parameter.getName()));
+        }
+
+        return result;
+    }
+
+    // TODO: rename
+    private Object test2(MochaRequest request, Method controllerMethod) {
+        if (!MochaReflectionTools.getAllParametersWithAnnotation(Body.class, controllerMethod).isEmpty()) {
+            return request.payload;
+        }
+        return null;
+    }
+
+    private ArrayList<Object> toVarargs(ArrayList<String> params, Object body) {
+        ArrayList<Object> result = new ArrayList<>();
+
+        result.addAll(params);
+        result.add(body);
+
+        return result;
     }
 
     private ControllerRoute getControllerRouteFromParsedRoute(String route, HashMap<String, ControllerRoute> routes) {
@@ -190,7 +230,8 @@ public class MochaClient {
 
     private Object parsePayloadToBodyObject(String payload, Method controllerMethod) {
         JsonObject object = JsonParser.parseString(payload).getAsJsonObject();
-        return MochaReflectionTools.hydrateClassFromJsonObject(controllerMethod.getParameterTypes()[1], object);
+        // TODO: this can be cleaner
+        return MochaReflectionTools.hydrateClassFromJsonObject(MochaReflectionTools.getBodyParameterTypeFromMethod(controllerMethod), object);
     }
 
     /**
