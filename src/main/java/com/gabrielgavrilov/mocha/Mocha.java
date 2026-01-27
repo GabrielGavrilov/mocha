@@ -1,10 +1,12 @@
 package com.gabrielgavrilov.mocha;
 
 import com.gabrielgavrilov.mocha.annotations.Controller;
+import com.gabrielgavrilov.mocha.annotations.Dependency;
 import com.gabrielgavrilov.mocha.annotations.Get;
 import com.gabrielgavrilov.mocha.annotations.Route;
 
 import java.io.*;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -18,15 +20,6 @@ import java.util.function.BiConsumer;
  */
 public class Mocha
 {
-
-    /**
-     * CRUD routes
-     */
-//    protected static HashMap<String, BiConsumer<MochaRequest, MochaResponse>> GET_ROUTES = new HashMap<>();
-//    protected static HashMap<String, BiConsumer<MochaRequest, MochaResponse>> POST_ROUTES = new HashMap<>();
-//    protected static HashMap<String, BiConsumer<MochaRequest, MochaResponse>> PUT_ROUTES = new HashMap<>();
-//    protected static HashMap<String, BiConsumer<MochaRequest, MochaResponse>> DELETE_ROUTES = new HashMap<>();
-
     /**
      * Mocha Controllers
      */
@@ -34,80 +27,11 @@ public class Mocha
     protected static HashMap<String, ControllerRoute> _GET_ROUTES = new HashMap<>();
 
     private static final ArrayList<Class<?>> controllers = new ArrayList<>();
+    private static final HashMap<Class<?>, Object> dependencies = new HashMap<>();
 
     public static void attach(Class<?> controller) {
         controllers.add(controller);
     }
-
-//    protected static String VIEWS_DIRECTORY = "";
-//    protected static String STATIC_DIRECTORY = "";
-
-    /**
-     * Used to set server settings.
-     *
-     * @param setting Setting name.
-     * @param value Setting value.
-     */
-//    public static void set(String setting, String value)
-//    {
-//        switch(setting)
-//        {
-//            case "views":
-//                VIEWS_DIRECTORY = value;
-//                break;
-//            case "static":
-//                STATIC_DIRECTORY = value;
-//                break;
-//        }
-//    }
-
-    /**
-     * Creates a new GET route. Stores the route and its callback into a HashMap. Gets called by
-     * the MochaClient class when needed.
-     *
-     * @param route Route.
-     * @param callback Callback function (BiConsumer that accepts MochaRequest and MochaResponse).
-     */
-//    public static void get(String route, BiConsumer<MochaRequest, MochaResponse> callback)
-//    {
-//        GET_ROUTES.put(route, callback);
-//    }
-
-    /**
-     * Creates a new POST route. Stores the route and its callback into a HashMap. Gets called by
-     * the MochaClient class when needed.
-     *
-     * @param route Route.
-     * @param callback Callback function (BiConsumer that accepts MochaRequest and MochaResponse).
-     */
-//    public static void post(String route, BiConsumer<MochaRequest, MochaResponse> callback)
-//    {
-//        POST_ROUTES.put(route, callback);
-//    }
-
-    /**
-     * Creates a new PUT route. Stores the route and its callback into a hashmap. Gets called by
-     * the MochaClient class when needed.
-     *
-     * @param route Route
-     * @param callback Callback function (BiConsumer that accepts MochaRequest and MochaResponse).
-     */
-//    public static void put(String route, BiConsumer<MochaRequest, MochaResponse> callback)
-//    {
-//        PUT_ROUTES.put(route, callback);
-//    }
-
-    /**
-     * Creates as new DELETE route. Stores the route and its callback into a hashmap. Gets called
-     * by the MochaClient class when needed.
-     *
-     * @param route
-     * @param callback
-     */
-//    public static void delete(String route, BiConsumer<MochaRequest, MochaResponse> callback)
-//    {
-//        DELETE_ROUTES.put(route, callback);
-//    }
 
     /**
      * Starts the Mocha web server at the given port and listens for new sockets.
@@ -127,6 +51,7 @@ public class Mocha
     private static void buildControllers() {
         for (Class<?> controller : controllers) {
             if (controller.isAnnotationPresent(Controller.class) && controller.isAnnotationPresent(Route.class)) {
+                buildDependencies(controller);
                 buildController(controller);
             }
         }
@@ -145,7 +70,18 @@ public class Mocha
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
 
+    private static void buildDependencies(Class<?> controller) {
+        try {
+            for (Field field : controller.getDeclaredFields()) {
+                if (field.isAnnotationPresent(Dependency.class)) {
+                    System.out.println(field.getGenericType());
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**

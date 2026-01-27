@@ -102,23 +102,39 @@ public class MochaClient {
 
         if (Mocha._GET_ROUTES.get(route) != null) {
             ControllerRoute controllerRoute = Mocha._GET_ROUTES.get(route);
-            Object value = controllerRoute.controllerMethod.invoke(controllerRoute.controllerInstance);
-            handleGetResponse(header, route, clientOutput, value);
+//            Object value = controllerRoute.controllerMethod.invoke(controllerRoute.controllerInstance);
+            handleGetResponse(header, route, clientOutput, controllerRoute, payload.toString());
             return;
         }
 
         throw new RouteNotFoundException();
     }
 
-    private void handleGetResponse(String header, String route, OutputStream clientOutput, Object methodOutput) throws IOException
-    {
+    private void handleGetResponse(String header, String route, OutputStream clientOutput, ControllerRoute controllerRoute, String payload) throws IOException, InvocationTargetException, IllegalAccessException {
         MochaRequest request = new MochaRequest();
         MochaResponse response = new MochaResponse();
+
+        System.out.println(payload);
+        parsePayload(header, payload, request, controllerRoute.controllerMethod);
 
         request.header = header;
 
         response.initializeHeader("200 OK", "application/json");
-        response.send(new Gson().toJson(methodOutput));
+//        response.send(new Gson().toJson(methodOutput));
+
+        Object[] varargs = toVarargs(
+                test(request, controllerRoute.controllerMethod),
+                test2(request, controllerRoute.controllerMethod)
+        ).toArray();
+
+        for (Object arg : varargs) {
+            System.out.println(arg.toString());
+        }
+
+        response.send(new Gson().toJson(controllerRoute.controllerMethod.invoke(
+                controllerRoute.controllerInstance,
+                varargs
+        )));
 
         writeFullResponse(response, clientOutput);
     }
@@ -136,18 +152,14 @@ public class MochaClient {
 
         response.initializeHeader("200 OK", "application/json");
 
-        Object[] args = toVarargs(
+        Object[] varargs = toVarargs(
                 test(request, controllerRoute.controllerMethod),
                 test2(request, controllerRoute.controllerMethod)
         ).toArray();
 
-        for (Object arg : args) {
-            System.out.println(arg);
-        }
-
         response.send(new Gson().toJson(controllerRoute.controllerMethod.invoke(
                 controllerRoute.controllerInstance,
-                args
+                varargs
         )));
 
         writeFullResponse(response, clientOutput);
@@ -170,23 +182,26 @@ public class MochaClient {
         if (!MochaReflectionTools.getAllParametersWithAnnotation(Body.class, controllerMethod).isEmpty()) {
             return request.payload;
         }
+        System.out.println("no body");
         return null;
     }
 
+    // TODO: cleanup
     private ArrayList<Object> toVarargs(ArrayList<String> params, Object body) {
-        ArrayList<Object> result = new ArrayList<>();
-
-        result.addAll(params);
-        result.add(body);
-
+        ArrayList<Object> result = new ArrayList<>(params);
+        if (body != null) {
+            result.add(body);
+        }
         return result;
     }
 
     private ControllerRoute getControllerRouteFromParsedRoute(String route, HashMap<String, ControllerRoute> routes) {
         for (Map.Entry<String, ControllerRoute> entry : routes.entrySet()) {
             MochaParser parser = new MochaParser(entry.getKey(), route);
-            if(parser.isParsable())
+            if(parser.isParsable()) {
+                System.out.println("Parsed: " + route + " := " + entry.getKey());
                 return entry.getValue();
+            }
         }
 
         return null;

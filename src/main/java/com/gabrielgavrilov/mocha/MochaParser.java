@@ -50,7 +50,7 @@ public class MochaParser {
                 return false;
         }
 
-        return true;
+        return hasTemplate;
     }
 
     /**
