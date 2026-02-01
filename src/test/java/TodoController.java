@@ -10,8 +10,13 @@ public class TodoController {
     private TodoService todoService;
 
     @Get
-    public Todo get() {
-        return new Todo("Lorem Ipsum Dolor sit amet");
+    public Todo[] get() {
+        return todoService.getAll();
+    }
+
+    @Get("/add")
+    public Todo addTodo(@Body Todo todo) {
+        return todoService.addTodo(todo);
     }
 
 }

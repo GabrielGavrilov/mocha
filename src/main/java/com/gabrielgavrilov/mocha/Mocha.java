@@ -40,6 +40,7 @@ public class Mocha
      */
     public static void listen(int port) {
         try {
+            instantiateDependencies();
             buildControllers();
             MochaListenerThread serverThread = new MochaListenerThread(port);
             serverThread.start();
@@ -48,19 +49,59 @@ public class Mocha
         }
     }
 
+    private static void instantiateDependencies() {
+        for (Class<?> controller : controllers) {
+            instantiateDependency(controller);
+        }
+    }
+
+    private static void instantiateDependency(Class<?> controller) {
+        try {
+            for (Field field : controller.getDeclaredFields()) {
+                if (field.isAnnotationPresent(Dependency.class)) {
+                    dependencies.put(field.getType(), field.getType().getDeclaredConstructor().newInstance());
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private static void buildControllers() {
         for (Class<?> controller : controllers) {
             if (controller.isAnnotationPresent(Controller.class) && controller.isAnnotationPresent(Route.class)) {
-                buildDependencies(controller);
+//                buildControllerDependencies(controller);
                 buildController(controller);
             }
         }
     }
 
+//    private static void buildControllerDependencies(Class<?> controller) {
+//        try {
+//            for (Field field : controller.getDeclaredFields()) {
+//                if (field.isAnnotationPresent(Dependency.class)) {
+//                    field.setAccessible(true);
+//                    field.set(field.getType(), dependencies.get(field.getType()));
+//                }
+//            }
+//        } catch (Exception e) {
+//            throw new RuntimeException(e);
+//        }
+//    }
+
     private static void buildController(Class<?> controller) {
         try {
             Route route = controller.getAnnotation(Route.class);
             Object controllerInstance = controller.getDeclaredConstructor().newInstance();
+
+            for (Field field : controller.getDeclaredFields()) {
+                if (field.isAnnotationPresent(Dependency.class)) {
+                    field.setAccessible(true);
+                    Object dependency = dependencies.get(field.getType());
+                    field.set(controllerInstance, dependency);
+                }
+            }
+
             for (Method method : controller.getDeclaredMethods()) {
                 if (method.isAnnotationPresent(Get.class)) {
                     Get get = method.getAnnotation(Get.class);
@@ -72,17 +113,7 @@ public class Mocha
         }
     }
 
-    private static void buildDependencies(Class<?> controller) {
-        try {
-            for (Field field : controller.getDeclaredFields()) {
-                if (field.isAnnotationPresent(Dependency.class)) {
-                    System.out.println(field.getGenericType());
-                }
-            }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
+
 
     /**
      * Starts the Mocha web server at the given port and host address and listens for new sockets.
