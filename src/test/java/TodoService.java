@@ -1,3 +1,6 @@
+import com.gabrielgavrilov.mocha.exceptions.BadRequest;
+import jdk.jshell.spi.ExecutionControl;
+
 import java.util.ArrayList;
 
 public class TodoService {
@@ -7,7 +10,8 @@ public class TodoService {
     public TodoService() {}
 
     public Todo[] getAll() {
-        return this.todos.toArray(new Todo[todos.size()]);
+//        return this.todos.toArray(new Todo[todos.size()]);
+        throw new NotAllowedException("Not allowed");
     }
 
     public Todo addTodo(Todo todo) {

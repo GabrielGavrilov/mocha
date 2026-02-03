@@ -8,7 +8,7 @@ import java.util.Objects;
 public class MochaRequest<T>
 {
     public Object payload;
-    public HashMap<String, String> parameter = new HashMap<>();
+    public HashMap<String, Object> parameter = new HashMap<>();
     public HashMap<String, String> cookie = new HashMap<>();
     public String header = "";
 
