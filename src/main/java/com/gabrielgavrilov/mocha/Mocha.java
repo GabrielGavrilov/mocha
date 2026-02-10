@@ -1,9 +1,6 @@
 package com.gabrielgavrilov.mocha;
 
-import com.gabrielgavrilov.mocha.annotations.Controller;
-import com.gabrielgavrilov.mocha.annotations.Dependency;
-import com.gabrielgavrilov.mocha.annotations.Get;
-import com.gabrielgavrilov.mocha.annotations.Route;
+import com.gabrielgavrilov.mocha.annotations.*;
 
 import java.io.*;
 import java.lang.reflect.Field;
@@ -25,6 +22,9 @@ public class Mocha
      */
 
     protected static HashMap<String, ControllerRoute> _GET_ROUTES = new HashMap<>();
+    protected static HashMap<String, ControllerRoute> _POST_ROUTES = new HashMap<>();
+    protected static HashMap<String, ControllerRoute> _PUT_ROUTES = new HashMap<>();
+    protected static HashMap<String, ControllerRoute> _DELETE_ROUTES = new HashMap<>();
 
     private static final ArrayList<Class<?>> controllers = new ArrayList<>();
     private static final HashMap<Class<?>, Object> dependencies = new HashMap<>();
@@ -70,24 +70,11 @@ public class Mocha
     private static void buildControllers() {
         for (Class<?> controller : controllers) {
             if (controller.isAnnotationPresent(Controller.class) && controller.isAnnotationPresent(Route.class)) {
-//                buildControllerDependencies(controller);
                 buildController(controller);
             }
         }
     }
 
-//    private static void buildControllerDependencies(Class<?> controller) {
-//        try {
-//            for (Field field : controller.getDeclaredFields()) {
-//                if (field.isAnnotationPresent(Dependency.class)) {
-//                    field.setAccessible(true);
-//                    field.set(field.getType(), dependencies.get(field.getType()));
-//                }
-//            }
-//        } catch (Exception e) {
-//            throw new RuntimeException(e);
-//        }
-//    }
 
     private static void buildController(Class<?> controller) {
         try {
@@ -106,6 +93,18 @@ public class Mocha
                 if (method.isAnnotationPresent(Get.class)) {
                     Get get = method.getAnnotation(Get.class);
                     _GET_ROUTES.put(route.value() + get.value(), new ControllerRoute(controllerInstance, method));
+                }
+                else if (method.isAnnotationPresent(Post.class)) {
+                    Post post = method.getAnnotation(Post.class);
+                    _POST_ROUTES.put(route.value() + post.value(), new ControllerRoute(controllerInstance, method));
+                }
+                else if (method.isAnnotationPresent(Put.class)) {
+                    Put put = method.getAnnotation(Put.class);
+                    _PUT_ROUTES.put(route.value() + put.value(), new ControllerRoute(controllerInstance, method));
+                }
+                else if (method.isAnnotationPresent(Delete.class)) {
+                    Delete delete = method.getAnnotation(Delete.class);
+                    _DELETE_ROUTES.put(route.value() + delete.value(), new ControllerRoute(controllerInstance, method));
                 }
             }
         } catch (Exception e) {

@@ -76,17 +76,17 @@ public class MochaClient {
         switch(method)
         {
             case "GET":
-                handleGetRequest();
+                handleRequest(Mocha._GET_ROUTES);
                 break;
-//            case "POST":
-//                handlePostRequest(header, route, clientOutput, buffReader);
-//                break;
-//            case "PUT":
-//                handlePutRequest(header, route, clientOutput, buffReader);
-//                break;
-//            case "DELETE":
-//                handleDeleteRequest(header, route, clientOutput, buffReader);
-//                break;
+            case "POST":
+                handleRequest(Mocha._POST_ROUTES);
+                break;
+            case "PUT":
+                handleRequest(Mocha._PUT_ROUTES);
+                break;
+            case "DELETE":
+                handleRequest(Mocha._DELETE_ROUTES);
+                break;
         }
     }
 
@@ -107,28 +107,21 @@ public class MochaClient {
        }
     }
 
-    /**
-     * Handles the GET request.
-     *
-     * @throws IOException
-     */
-    private void handleGetRequest() {
-        ControllerRoute fromParsedRoute = getControllerRouteFromParsedRoute(route, Mocha._GET_ROUTES);
+    private void handleRequest(HashMap<String, ControllerRoute> methodRoutes) {
+        ControllerRoute fromParsedRoute = getControllerRouteFromParsedRoute(route, methodRoutes);
         Optional<String> payload = readRequestPayload();
 
         if (fromParsedRoute != null) {
-            handleParsedGetResponse(fromParsedRoute, payload);
-            return;
+            handleParsedResponse(fromParsedRoute, payload, methodRoutes);
         }
 
-        if (Mocha._GET_ROUTES.get(route) != null) {
-            ControllerRoute controllerRoute = Mocha._GET_ROUTES.get(route);
-            handleGetResponse(controllerRoute, payload);
-            return;
+        if (methodRoutes.get(route) != null) {
+            ControllerRoute controllerRoute = methodRoutes.get(route);
+            handleResponse(controllerRoute, payload);
         }
     }
 
-    private void handleGetResponse(ControllerRoute controllerRoute, Optional<String> payload) {
+    private void handleResponse(ControllerRoute controllerRoute, Optional<String> payload) {
         MochaRequest request = new MochaRequest();
         MochaResponse response = new MochaResponse();
 
@@ -152,10 +145,10 @@ public class MochaClient {
         writeFullResponse(response);
     }
 
-    private void handleParsedGetResponse(ControllerRoute controllerRoute, Optional<String> payload) {
+    private void handleParsedResponse(ControllerRoute controllerRoute, Optional<String> payload, HashMap<String, ControllerRoute> methodRoutes) {
         MochaRequest request = new MochaRequest();
         MochaResponse response = new MochaResponse();
-        MochaParser parser = new MochaParser(getTemplateFromParsedRoute(route, Mocha._GET_ROUTES), route);
+        MochaParser parser = new MochaParser(getTemplateFromParsedRoute(route, methodRoutes), route);
 
         if (payload.isPresent())
             parsePayload(clientHeader.toString(), payload.get(), request, controllerRoute.controllerMethod);

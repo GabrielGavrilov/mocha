@@ -14,14 +14,9 @@ public class TodoController {
         return todoService.getAll();
     }
 
-    @Get("/add")
+    @Post
     public Todo addTodo(@Body Todo todo) {
         return todoService.addTodo(todo);
     }
-
-//    @Get("/{firstName}/{lastName}")
-//    public String test(@Param String firstName, @Param String lastName) {
-//        return firstName + " " + lastName;
-//    }
 
 }
