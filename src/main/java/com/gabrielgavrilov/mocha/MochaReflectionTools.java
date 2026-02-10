@@ -7,6 +7,7 @@ import com.google.gson.JsonObject;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
@@ -52,6 +53,14 @@ public class MochaReflectionTools {
 
             return classInstance;
         } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static Object invokeMethod(Method method, Object instance, Object... args) {
+        try {
+            return method.invoke(instance, args);
+        } catch (IllegalAccessException | InvocationTargetException e) {
             throw new RuntimeException(e);
         }
     }

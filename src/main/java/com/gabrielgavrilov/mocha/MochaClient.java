@@ -2,21 +2,27 @@ package com.gabrielgavrilov.mocha;
 
 import com.gabrielgavrilov.mocha.annotations.Body;
 import com.gabrielgavrilov.mocha.annotations.Param;
-import com.gabrielgavrilov.mocha.exceptions.BadRequest;
 import com.gabrielgavrilov.mocha.exceptions.HttpException;
+import com.gabrielgavrilov.mocha.exceptions.InternalServerError;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
+import javax.swing.text.html.Option;
 import java.io.*;
-import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.*;
-import java.util.function.BiConsumer;
 
 public class MochaClient {
+
+    private OutputStream clientOutputStream;
+    private BufferedReader clientBufferedReader;
+    private StringBuilder clientHeader = new StringBuilder();
+
+    private String route;
+    private String method;
 
     /**
      * Initializes the MochaClient class. Reads the socket's requested header
@@ -26,50 +32,51 @@ public class MochaClient {
      * @param clientOutput Socket OutputStream.
      */
     MochaClient(InputStream clientInput, OutputStream clientOutput) {
+        InputStreamReader streamReader = new InputStreamReader(clientInput);
+        clientOutputStream = clientOutput;
+        clientBufferedReader = new BufferedReader(streamReader);
+
+        readRequestHeader();
+        handleRequest();
+
+//        try {
+//
+//
+//        } catch(HttpException e) {
+//            this.handleHttpException(clientOutput, e);
+//        } catch (InvocationTargetException e) {
+//            if (e.getCause() instanceof HttpException ex) {
+//                this.handleHttpException(clientOutput, ex);
+//            }
+//            this.handleHttpException(clientOutput, new InternalServerError(e.getMessage()));
+//        } catch (Exception e) {
+//            this.handleHttpException(clientOutput, new InternalServerError(e.getMessage()));
+//        }
+    }
+
+    private void readRequestHeader() {
         try {
-            InputStreamReader streamReader = new InputStreamReader(clientInput);
-            BufferedReader buffReader = new BufferedReader(streamReader);
-            StringBuilder clientHeader = new StringBuilder();
-
             String line;
-            while((line = buffReader.readLine()) != null && !line.isEmpty()) {
-                clientHeader.append(line).append("\r\n");
+            while((line = this.clientBufferedReader.readLine()) != null && !line.isEmpty()) {
+                this.clientHeader.append(line).append("\r\n");
             }
 
-            String route = getRequestedRoute(clientHeader.toString());
-            String method = getRequestedMethod(clientHeader.toString());
-
-            handleRequest(clientHeader.toString(), route, method, clientOutput, buffReader);
-
-        } catch(HttpException e) {
-            // TODO: rename
-            this.test(clientOutput, e);
-        } catch (InvocationTargetException e) {
-            if (e.getCause() instanceof HttpException ex) {
-                this.test(clientOutput, ex);
-            }
-            // TODO: print stack trace and throw 500 internal error if not an instance of HttpException
+            this.route = getRequestedRoute(clientHeader.toString());
+            this.method = getRequestedMethod(clientHeader.toString());
         } catch (Exception e) {
-            // TODO: same here
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
     }
 
     /**
      * Handles the given HTTP request.
-     *
-     * @param header Socket header.
-     * @param route Requested route.
-     * @param method Requested method.
-     * @param clientOutput Client output stream.
-     * @param buffReader Buffered Reader
      * @throws IOException
      */
-    private void handleRequest(String header, String route, String method, OutputStream clientOutput, BufferedReader buffReader) throws IOException, InvocationTargetException, IllegalAccessException {
+    private void handleRequest() {
         switch(method)
         {
             case "GET":
-                handleGetRequest(header, route, clientOutput, buffReader);
+                handleGetRequest();
                 break;
 //            case "POST":
 //                handlePostRequest(header, route, clientOutput, buffReader);
@@ -83,41 +90,52 @@ public class MochaClient {
         }
     }
 
+    private Optional<String> readRequestPayload() {
+       try {
+           StringBuilder payload = new StringBuilder();
+
+           while(this.clientBufferedReader.ready()) {
+               payload.append((char)this.clientBufferedReader.read());
+           }
+
+           return !payload.isEmpty()
+                   ? Optional.of(payload.toString())
+                   : Optional.empty();
+
+       } catch (IOException e) {
+           return Optional.empty();
+       }
+    }
+
     /**
      * Handles the GET request.
      *
-     * @param header Client HTTP header.
-     * @param route Requested route.
-     * @param clientOutput Client output stream.
      * @throws IOException
      */
-    private void handleGetRequest(String header, String route, OutputStream clientOutput, BufferedReader buffReader) throws InvocationTargetException, IllegalAccessException, IOException {
+    private void handleGetRequest() {
         ControllerRoute fromParsedRoute = getControllerRouteFromParsedRoute(route, Mocha._GET_ROUTES);
-        StringBuilder payload = new StringBuilder();
-
-        while(buffReader.ready()) {
-            payload.append((char)buffReader.read());
-        }
+        Optional<String> payload = readRequestPayload();
 
         if (fromParsedRoute != null) {
-            handleParsedGetResponse(header, route, fromParsedRoute, clientOutput, payload.toString());
+            handleParsedGetResponse(fromParsedRoute, payload);
             return;
         }
 
         if (Mocha._GET_ROUTES.get(route) != null) {
             ControllerRoute controllerRoute = Mocha._GET_ROUTES.get(route);
-            handleGetResponse(header, route, clientOutput, controllerRoute, payload.toString());
+            handleGetResponse(controllerRoute, payload);
             return;
         }
     }
 
-    private void handleGetResponse(String header, String route, OutputStream clientOutput, ControllerRoute controllerRoute, String payload) throws IOException, InvocationTargetException, IllegalAccessException {
+    private void handleGetResponse(ControllerRoute controllerRoute, Optional<String> payload) {
         MochaRequest request = new MochaRequest();
         MochaResponse response = new MochaResponse();
 
-//        parsePayload(header, payload, request, controllerRoute.controllerMethod);
-        request.header = header;
+        if (payload.isPresent())
+            parsePayload(clientHeader.toString(), payload.get(), request, controllerRoute.controllerMethod);
 
+        request.header = clientHeader.toString();
         response.initializeHeader("200 OK", "application/json");
 
         Object[] varargs = convertParametersAndPayloadToList(
@@ -125,25 +143,25 @@ public class MochaClient {
                 maybeGetRequestPayload(request, controllerRoute.controllerMethod)
         ).toArray();
 
-        response.send(new Gson().toJson(controllerRoute.controllerMethod.invoke(
+        response.send(new Gson().toJson(MochaReflectionTools.invokeMethod(
+                controllerRoute.controllerMethod,
                 controllerRoute.controllerInstance,
                 varargs
         )));
 
-        writeFullResponse(response, clientOutput);
+        writeFullResponse(response);
     }
 
-    private void handleParsedGetResponse(String header, String route, ControllerRoute controllerRoute, OutputStream clientOutput, String payload) throws IOException, InvocationTargetException, IllegalAccessException {
+    private void handleParsedGetResponse(ControllerRoute controllerRoute, Optional<String> payload) {
         MochaRequest request = new MochaRequest();
         MochaResponse response = new MochaResponse();
         MochaParser parser = new MochaParser(getTemplateFromParsedRoute(route, Mocha._GET_ROUTES), route);
 
-        parsePayload(header, payload, request, controllerRoute.controllerMethod);
+        if (payload.isPresent())
+            parsePayload(clientHeader.toString(), payload.get(), request, controllerRoute.controllerMethod);
 
         request.parameter = parser.parse();
-        request.cookie = parseCookiesToHashMap(header);
-        request.header = header;
-
+        request.header = clientHeader.toString();
         response.initializeHeader("200 OK", "application/json");
 
         Object[] varargs = convertParametersAndPayloadToList(
@@ -151,12 +169,13 @@ public class MochaClient {
                 maybeGetRequestPayload(request, controllerRoute.controllerMethod)
         ).toArray();
 
-        response.send(new Gson().toJson(controllerRoute.controllerMethod.invoke(
+        response.send(new Gson().toJson(MochaReflectionTools.invokeMethod(
+                controllerRoute.controllerMethod,
                 controllerRoute.controllerInstance,
                 varargs
         )));
 
-        writeFullResponse(response, clientOutput);
+        writeFullResponse(response);
     }
 
     private List<String> convertRequestParametersToList(MochaRequest request, Method controllerMethod) {
@@ -199,8 +218,7 @@ public class MochaClient {
      * @return String
      */
     private String getTemplateFromParsedRoute(String route, HashMap<String, ControllerRoute> hashMap) {
-        for(Map.Entry<String, ControllerRoute> entry : hashMap.entrySet())
-        {
+        for(Map.Entry<String, ControllerRoute> entry : hashMap.entrySet()) {
             MochaParser parser = new MochaParser(entry.getKey(), route);
             if(parser.isParsable())
                 return entry.getKey();
@@ -211,9 +229,7 @@ public class MochaClient {
 
     private void parsePayload(String header, String payload, MochaRequest request, Method controllerMethod) {
         String contentType = getRequestContentType(header);
-
-        switch(contentType)
-        {
+        switch(contentType) {
             default:
                 request.payload = parseJsonPayloadToBodyObject(payload, controllerMethod);
                 break;
@@ -255,23 +271,12 @@ public class MochaClient {
         return null;
     }
 
-    /**
-     * Handles the 404 page.
-     *
-     * @param clientOutput Client output stream.
-     * @throws IOException
-     */
-    private void handleRouteNotFoundRequest(OutputStream clientOutput) {
-        MochaResponse response = new MochaResponse();
-        response.initializeHeader("404 Not Found", "application/json");
-        writeFullResponse(response, clientOutput);
-    }
 
-    private void test(OutputStream clientOutput, HttpException e) {
-        MochaResponse response = new MochaResponse();
-        response.initializeHeader(String.format("%d %s", e.getStatusCode(), e.getStatusText()), "application/json");
-        writeFullResponse(response, clientOutput);
-    }
+//    private void handleHttpException(OutputStream clientOutput, HttpException e) {
+//        MochaResponse response = new MochaResponse();
+//        response.initializeHeader(String.format("%d %s", e.getStatusCode(), e.getStatusText()), "application/json");
+//        writeFullResponse(response, clientOutput);
+//    }
 
     /**
      * Returns the requested route.
@@ -302,11 +307,11 @@ public class MochaClient {
         return clientHeader.split("\r\n")[1].split(": ")[1];
     }
 
-    private static void writeFullResponse(MochaResponse response, OutputStream clientOutput) {
+    private void writeFullResponse(MochaResponse response) {
         try {
-            clientOutput.write(response.header.toString().getBytes());
-            clientOutput.write(response.body.toString().getBytes());
-            clientOutput.flush();
+            clientOutputStream.write(response.header.toString().getBytes());
+            clientOutputStream.write(response.body.toString().getBytes());
+            clientOutputStream.flush();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

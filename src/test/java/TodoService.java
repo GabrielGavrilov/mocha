@@ -10,8 +10,8 @@ public class TodoService {
     public TodoService() {}
 
     public Todo[] getAll() {
-//        return this.todos.toArray(new Todo[todos.size()]);
-        throw new NotAllowedException("Not allowed");
+        return this.todos.toArray(new Todo[todos.size()]);
+//        throw new NotAllowedException("Not allowed");
     }
 
     public Todo addTodo(Todo todo) {
