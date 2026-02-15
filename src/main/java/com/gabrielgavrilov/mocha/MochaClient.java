@@ -2,6 +2,8 @@ package com.gabrielgavrilov.mocha;
 
 import com.gabrielgavrilov.mocha.annotations.Body;
 import com.gabrielgavrilov.mocha.annotations.Param;
+import com.gabrielgavrilov.mocha.annotations.Request;
+import com.gabrielgavrilov.mocha.annotations.Response;
 import com.gabrielgavrilov.mocha.exceptions.HttpException;
 import com.gabrielgavrilov.mocha.exceptions.InternalServerError;
 import com.google.gson.Gson;
@@ -90,7 +92,7 @@ public class MochaClient {
         }
     }
 
-    private Optional<String> readRequestPayload() {
+    private Optional<String> maybeReadRequestPayload() {
        try {
            StringBuilder payload = new StringBuilder();
 
@@ -109,7 +111,7 @@ public class MochaClient {
 
     private void handleRequest(HashMap<String, ControllerRoute> methodRoutes) {
         ControllerRoute fromParsedRoute = getControllerRouteFromParsedRoute(route, methodRoutes);
-        Optional<String> payload = readRequestPayload();
+        Optional<String> payload = maybeReadRequestPayload();
 
         if (fromParsedRoute != null) {
             handleParsedResponse(fromParsedRoute, payload, methodRoutes);
@@ -129,9 +131,10 @@ public class MochaClient {
             parsePayload(clientHeader.toString(), payload.get(), request, controllerRoute.controllerMethod);
 
         request.header = clientHeader.toString();
-        response.initializeHeader("200 OK", "application/json");
 
-        Object[] varargs = convertParametersAndPayloadToList(
+        Object[] varargs = convertRequestResponseParametersAndPayloadToList(
+                maybeGetMochaRequest(request, controllerRoute.controllerMethod),
+                maybeGetMochaResponse(response, controllerRoute.controllerMethod),
                 convertRequestParametersToList(request, controllerRoute.controllerMethod),
                 maybeGetRequestPayload(request, controllerRoute.controllerMethod)
         ).toArray();
@@ -155,9 +158,10 @@ public class MochaClient {
 
         request.parameter = parser.parse();
         request.header = clientHeader.toString();
-        response.initializeHeader("200 OK", "application/json");
 
-        Object[] varargs = convertParametersAndPayloadToList(
+        Object[] varargs = convertRequestResponseParametersAndPayloadToList(
+                maybeGetMochaRequest(request, controllerRoute.controllerMethod),
+                maybeGetMochaResponse(response, controllerRoute.controllerMethod),
                 convertRequestParametersToList(request, controllerRoute.controllerMethod),
                 maybeGetRequestPayload(request, controllerRoute.controllerMethod)
         ).toArray();
@@ -174,6 +178,7 @@ public class MochaClient {
     private List<String> convertRequestParametersToList(MochaRequest request, Method controllerMethod) {
         List<String> result = new ArrayList<>();
         ArrayList<Parameter> param = MochaReflectionTools.getAllParametersWithAnnotation(Param.class, controllerMethod);
+
         for (Parameter parameter : param)
             result.add((String) request.parameter.get(parameter.getName()));
 
@@ -187,8 +192,29 @@ public class MochaClient {
         return Optional.empty();
     }
 
-    private List<Object> convertParametersAndPayloadToList(List<String> params, Optional<Object> payload) {
-        List<Object> result = new ArrayList<>(params);
+    private Optional<MochaRequest> maybeGetMochaRequest(MochaRequest request, Method controllerMethod) {
+        if (!MochaReflectionTools.getAllParametersWithAnnotation(Request.class, controllerMethod).isEmpty()) {
+            return Optional.of(request);
+        }
+        return Optional.empty();
+    }
+
+    private Optional<MochaResponse> maybeGetMochaResponse(MochaResponse response, Method controllerMethod) {
+        if (!MochaReflectionTools.getAllParametersWithAnnotation(Response.class, controllerMethod).isEmpty()) {
+            return Optional.of(response);
+        }
+        return Optional.empty();
+    }
+
+    private List<Object> convertRequestResponseParametersAndPayloadToList(Optional<MochaRequest> request,
+                                                                          Optional<MochaResponse> response,
+                                                                          List<String> params,
+                                                                          Optional<Object> payload) {
+        List<Object> result = new ArrayList<>();
+        request.ifPresent(result::add);
+        response.ifPresent(result::add);
+        if (!payload.isEmpty())
+            result.add(params);
         payload.ifPresent(result::add);
         return result;
     }
@@ -263,13 +289,6 @@ public class MochaClient {
 
         return null;
     }
-
-
-//    private void handleHttpException(OutputStream clientOutput, HttpException e) {
-//        MochaResponse response = new MochaResponse();
-//        response.initializeHeader(String.format("%d %s", e.getStatusCode(), e.getStatusText()), "application/json");
-//        writeFullResponse(response, clientOutput);
-//    }
 
     /**
      * Returns the requested route.
