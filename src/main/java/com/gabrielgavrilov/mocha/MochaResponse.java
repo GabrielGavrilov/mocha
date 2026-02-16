@@ -19,10 +19,6 @@ public class MochaResponse {
         this.header.append(header + ": " + value + "\r\n");
     }
 
-    public void setCookie(String name, String value) {
-        addHeader("Set-Cookie", name+"="+value);
-    }
-
     public void send(String data) {
         this.body.append(data);
         appendEmpty();

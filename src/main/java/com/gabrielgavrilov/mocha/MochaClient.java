@@ -264,35 +264,6 @@ public class MochaClient {
     }
 
     /**
-     * Parses the cookies into a hash map.
-     *
-     * @param header Client HTTP header.
-     * @return String and String Hashmap.
-     */
-    private HashMap<String, String> parseCookiesToHashMap(String header) {
-        HashMap<String, String> cookieData = new HashMap<>();
-
-        if(header.contains("Cookie")) {
-            String[] headerSplit = header.split("\n");
-            for(int i = 0; i < headerSplit.length; i++) {
-                if(headerSplit[i].contains("Cookie")) {
-                    String cookieHeader = headerSplit[i].substring(8);
-                    String[] cookies = cookieHeader.split("; ");
-
-                    for(int j = 0; j < cookies.length; j++) {
-                        String[] cookie = cookies[j].split("=");
-                        cookieData.put(cookie[0], cookie[1]);
-                    }
-
-                    return cookieData;
-                }
-            }
-        }
-
-        return null;
-    }
-
-    /**
      * Returns the requested route.
      *
      * @param clientHeader Client HTTP header.
