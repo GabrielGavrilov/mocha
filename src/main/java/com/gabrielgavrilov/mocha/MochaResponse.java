@@ -10,6 +10,11 @@ public class MochaResponse {
         this.addHeader("Content-Type", "application/json");
     }
 
+    public MochaResponse(int statusCode, String statusText) {
+        this.header.append(String.format("HTTP/1.0 %d %s", statusCode, statusText));
+        this.addHeader("Content-Type", "application/json");
+    }
+
     public void addHeader(String header, String value) {
         this.header.append(header + ": " + value + "\r\n");
     }

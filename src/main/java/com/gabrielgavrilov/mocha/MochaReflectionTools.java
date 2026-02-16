@@ -1,6 +1,7 @@
 package com.gabrielgavrilov.mocha;
 
 import com.gabrielgavrilov.mocha.annotations.Body;
+import com.gabrielgavrilov.mocha.exceptions.HttpException;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -60,7 +61,17 @@ public class MochaReflectionTools {
     public static Object invokeMethod(Method method, Object instance, Object... args) {
         try {
             return method.invoke(instance, args);
-        } catch (IllegalAccessException | InvocationTargetException e) {
+        } catch(InvocationTargetException e) {
+
+            Throwable target = e.getTargetException();
+
+            if (target instanceof HttpException ex) {
+                throw ex;
+            }
+
+            throw new RuntimeException(e);
+
+        } catch (IllegalAccessException e) {
             throw new RuntimeException(e);
         }
     }

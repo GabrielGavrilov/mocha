@@ -37,23 +37,18 @@ public class MochaClient {
         InputStreamReader streamReader = new InputStreamReader(clientInput);
         clientOutputStream = clientOutput;
         clientBufferedReader = new BufferedReader(streamReader);
+        process();
+    }
 
-        readRequestHeader();
-        handleRequest();
-
-//        try {
-//
-//
-//        } catch(HttpException e) {
-//            this.handleHttpException(clientOutput, e);
-//        } catch (InvocationTargetException e) {
-//            if (e.getCause() instanceof HttpException ex) {
-//                this.handleHttpException(clientOutput, ex);
-//            }
-//            this.handleHttpException(clientOutput, new InternalServerError(e.getMessage()));
-//        } catch (Exception e) {
-//            this.handleHttpException(clientOutput, new InternalServerError(e.getMessage()));
-//        }
+    private void process() {
+        try {
+            readRequestHeader();
+            handleRequest();
+        } catch(HttpException e) {
+            this.handleHttpException(e);
+        } catch (Exception e) {
+            this.handleHttpException(new InternalServerError(e.getMessage()));
+        }
     }
 
     private void readRequestHeader() {
@@ -175,6 +170,13 @@ public class MochaClient {
         writeFullResponse(response);
     }
 
+    private void handleHttpException(HttpException ex) {
+        ex.printStackTrace();
+        MochaResponse response = new MochaResponse(ex.getStatusCode(), ex.getStatusText());
+        response.send(ex.getMessage());
+        writeFullResponse(response);
+    }
+
     private List<String> convertRequestParametersToList(MochaRequest request, Method controllerMethod) {
         List<String> result = new ArrayList<>();
         ArrayList<Parameter> param = MochaReflectionTools.getAllParametersWithAnnotation(Param.class, controllerMethod);
@@ -213,7 +215,7 @@ public class MochaClient {
         List<Object> result = new ArrayList<>();
         request.ifPresent(result::add);
         response.ifPresent(result::add);
-        if (!payload.isEmpty())
+        if (!params.isEmpty())
             result.add(params);
         payload.ifPresent(result::add);
         return result;

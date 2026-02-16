@@ -11,12 +11,12 @@ public class TodoService {
 
     public Todo[] getAll() {
         return this.todos.toArray(new Todo[todos.size()]);
-//        throw new NotAllowedException("Not allowed");
     }
 
     public Todo addTodo(Todo todo) {
-        this.todos.add(todo);
-        return todo;
+        throw new NotAllowedException("Not allowed");
+//        this.todos.add(todo);
+//        return todo;
     }
 
 }
