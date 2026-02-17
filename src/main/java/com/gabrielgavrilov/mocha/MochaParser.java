@@ -34,8 +34,7 @@ public class MochaParser {
      *
      * @return Boolean
      */
-    public boolean isParsable()
-    {
+    public boolean isParsable() {
         boolean hasTemplate = false;
         if (this.templateSplit.length != this.textSplit.length)
             return false;
@@ -59,8 +58,7 @@ public class MochaParser {
      *
      * @return HashMap<String, String>
      */
-    public HashMap<String, String> parse()
-    {
+    public HashMap<String, String> parse() {
         return this.parserData;
     }
 }

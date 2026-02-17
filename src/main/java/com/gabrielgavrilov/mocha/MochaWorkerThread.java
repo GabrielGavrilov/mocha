@@ -15,8 +15,7 @@ public class MochaWorkerThread extends Thread {
      *
      * @param socket Client socket.
      */
-    MochaWorkerThread(Socket socket)
-    {
+    MochaWorkerThread(Socket socket) {
         this.client = socket;
     }
 
@@ -24,19 +23,15 @@ public class MochaWorkerThread extends Thread {
      * Run method override for the MochaWorkerThread.
      */
     @Override
-    public void run()
-    {
-        try
-        {
+    public void run() {
+        try {
             InputStream clientInput = this.client.getInputStream();
             OutputStream clientOutput = this.client.getOutputStream();
 
             new MochaClient(clientInput, clientOutput);
 
             client.close();
-        }
-        catch (IOException e)
-        {
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }

@@ -35,18 +35,13 @@ public class MochaListenerThread extends Thread {
      * Run method override for the MochaListenerThread.
      */
     @Override
-    public void run()
-    {
-        while(this.server.isBound() && !this.server.isClosed())
-        {
-            try
-            {
+    public void run() {
+        while(this.server.isBound() && !this.server.isClosed()) {
+            try {
                 Socket client = this.server.accept();
                 MochaWorkerThread workerThread = new MochaWorkerThread(client);
                 workerThread.start();
-            }
-            catch(IOException e)
-            {
+            } catch(IOException e) {
                 e.printStackTrace();
             }
         }
