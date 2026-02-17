@@ -46,8 +46,6 @@ public class MochaClient {
             handleRequest();
         } catch(HttpException e) {
             this.handleHttpException(e);
-        } catch (Exception e) {
-            this.handleHttpException(new InternalServerError(e.getMessage()));
         }
     }
 
@@ -216,7 +214,7 @@ public class MochaClient {
         request.ifPresent(result::add);
         response.ifPresent(result::add);
         if (!params.isEmpty())
-            result.add(params);
+            result.addAll(params);
         payload.ifPresent(result::add);
         return result;
     }

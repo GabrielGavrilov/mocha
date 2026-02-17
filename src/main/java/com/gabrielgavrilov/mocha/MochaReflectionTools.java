@@ -62,7 +62,6 @@ public class MochaReflectionTools {
         try {
             return method.invoke(instance, args);
         } catch(InvocationTargetException e) {
-
             Throwable target = e.getTargetException();
 
             if (target instanceof HttpException ex) {
@@ -70,7 +69,6 @@ public class MochaReflectionTools {
             }
 
             throw new RuntimeException(e);
-
         } catch (IllegalAccessException e) {
             throw new RuntimeException(e);
         }

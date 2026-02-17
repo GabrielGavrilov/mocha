@@ -6,7 +6,7 @@
 
     <groupId>com.gabrielgavrilov.mocha</groupId>
     <artifactId>mocha</artifactId>
-    <version>1.5-SNAPSHOT</version>
+    <version>1.0.0</version>
 
     <build>
         <plugins>
