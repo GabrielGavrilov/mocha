@@ -49,6 +49,28 @@ public class Mocha
         }
     }
 
+    /**
+     * Starts the Mocha web server at the given port and host address and listens for new sockets.
+     *
+     * @param port Port for the server.
+     * @param host Host IP for the server.
+     * @param callback Runnable callback that gets executed when the server starts
+     *                 listening for new sockets.
+     */
+    public static void listen(int port, String host, Runnable callback)
+    {
+        try
+        {
+            callback.run();
+            MochaListenerThread serverThread = new MochaListenerThread(port, host);
+            serverThread.start();
+        }
+        catch (IOException e)
+        {
+            throw new RuntimeException(e);
+        }
+    }
+
     private static void instantiateDependencies() {
         for (Class<?> controller : controllers) {
             instantiateDependency(controller);
@@ -75,19 +97,11 @@ public class Mocha
         }
     }
 
-
     private static void buildController(Class<?> controller) {
         try {
             Route route = controller.getAnnotation(Route.class);
             Object controllerInstance = controller.getDeclaredConstructor().newInstance();
-
-            for (Field field : controller.getDeclaredFields()) {
-                if (field.isAnnotationPresent(Dependency.class)) {
-                    field.setAccessible(true);
-                    Object dependency = dependencies.get(field.getType());
-                    field.set(controllerInstance, dependency);
-                }
-            }
+            buildDependencies(controller, controllerInstance);
 
             for (Method method : controller.getDeclaredMethods()) {
                 if (method.isAnnotationPresent(Get.class)) {
@@ -112,26 +126,16 @@ public class Mocha
         }
     }
 
-
-
-    /**
-     * Starts the Mocha web server at the given port and host address and listens for new sockets.
-     *
-     * @param port Port for the server.
-     * @param host Host IP for the server.
-     * @param callback Runnable callback that gets executed when the server starts
-     *                 listening for new sockets.
-     */
-    public static void listen(int port, String host, Runnable callback)
-    {
-        try
-        {
-            callback.run();
-            MochaListenerThread serverThread = new MochaListenerThread(port, host);
-            serverThread.start();
-        }
-        catch (IOException e)
-        {
+    private static void buildDependencies(Class<?> controller, Object controllerInstance) {
+        try {
+            for (Field field : controller.getDeclaredFields()) {
+                if (field.isAnnotationPresent(Dependency.class)) {
+                    field.setAccessible(true);
+                    Object dependency = dependencies.get(field.getType());
+                    field.set(controllerInstance, dependency);
+                }
+            }
+        } catch (IllegalAccessException e) {
             throw new RuntimeException(e);
         }
     }

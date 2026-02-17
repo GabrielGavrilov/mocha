@@ -1,8 +1,7 @@
-package Service.controller;
+package service.controller;
 
-import Service.dto.TodoDto;
-import Service.todo.Todo;
-import Service.todo.TodoService;
+import service.dto.TodoDto;
+import service.todo.TodoService;
 import com.gabrielgavrilov.mocha.MochaResponse;
 import com.gabrielgavrilov.mocha.annotations.*;
 

@@ -1,4 +1,4 @@
-package Service.dto;
+package service.dto;
 
 import java.util.UUID;
 

@@ -1,6 +1,6 @@
-package Service.todo;
+package service.todo;
 
-import Service.dto.TodoDto;
+import service.dto.TodoDto;
 
 public class TodoAssembler {
 

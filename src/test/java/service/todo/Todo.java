@@ -1,4 +1,4 @@
-package Service.todo;
+package service.todo;
 
 import java.util.UUID;
 

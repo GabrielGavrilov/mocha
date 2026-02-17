@@ -1,6 +1,6 @@
-package Service;
+package service;
 
-import Service.controller.TodoController;
+import service.controller.TodoController;
 import com.gabrielgavrilov.mocha.Mocha;
 
 public class TodoApp extends Mocha {

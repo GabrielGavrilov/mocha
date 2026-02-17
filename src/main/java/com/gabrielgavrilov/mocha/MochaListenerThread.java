@@ -26,7 +26,6 @@ public class MochaListenerThread extends Thread {
     MochaListenerThread(int port, String host) throws IOException {
         this.port = port;
         this.host = host;
-
         InetAddress hostAddress = InetAddress.getByName(host);
         this.server = new ServerSocket(port, 5, hostAddress);
     }
