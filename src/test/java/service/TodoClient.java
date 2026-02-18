@@ -2,6 +2,10 @@ package service;
 
 import com.fasterxml.jackson.core.util.JacksonFeature;
 import jakarta.ws.rs.core.GenericType;
+import jakarta.ws.rs.client.Client;
+import jakarta.ws.rs.client.ClientBuilder;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.client.WebTarget;
 import service.dto.TodoDto;
 
 import java.util.List;
