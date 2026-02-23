@@ -46,4 +46,12 @@ public class MochaListenerThread extends Thread {
         }
     }
 
+    public void stopServer() {
+        try {
+            this.server.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 }

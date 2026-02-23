@@ -21,6 +21,8 @@ public class Mocha
      * Mocha Controllers
      */
 
+    protected static MochaListenerThread _SERVER_LISTENER_THREAD;
+
     protected static HashMap<String, ControllerRoute> _GET_ROUTES = new HashMap<>();
     protected static HashMap<String, ControllerRoute> _POST_ROUTES = new HashMap<>();
     protected static HashMap<String, ControllerRoute> _PUT_ROUTES = new HashMap<>();
@@ -42,8 +44,8 @@ public class Mocha
         try {
             instantiateDependencies();
             buildControllers();
-            MochaListenerThread serverThread = new MochaListenerThread(port);
-            serverThread.start();
+            _SERVER_LISTENER_THREAD = new MochaListenerThread(port);
+            _SERVER_LISTENER_THREAD.start();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -57,18 +59,18 @@ public class Mocha
      * @param callback Runnable callback that gets executed when the server starts
      *                 listening for new sockets.
      */
-    public static void listen(int port, String host, Runnable callback)
-    {
-        try
-        {
+    public static void listen(int port, String host, Runnable callback) {
+        try {
             callback.run();
-            MochaListenerThread serverThread = new MochaListenerThread(port, host);
-            serverThread.start();
-        }
-        catch (IOException e)
-        {
+            _SERVER_LISTENER_THREAD = new MochaListenerThread(port, host);
+            _SERVER_LISTENER_THREAD.start();
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public static void stop() {
+        _SERVER_LISTENER_THREAD.stopServer();
     }
 
     private static void instantiateDependencies() {
