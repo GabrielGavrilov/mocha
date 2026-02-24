@@ -1,7 +1,6 @@
 package service.todo;
 
 import service.dto.TodoDto;
-import com.gabrielgavrilov.mocha.exceptions.NotFound;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,7 +26,7 @@ public class TodoService {
                 .filter(todo -> todo.getId().equals(UUID.fromString(id)))
                 .findFirst()
                 .map(todoAssembler::assemble)
-                .orElseThrow(() -> new NotFound(String.format("No todo item exists with the id of '%s'", id)));
+                .orElseThrow(() -> new TodoNotFoundException(String.format("No todo item exists with the id of '%s'", id)));
     }
 
     public TodoDto create(TodoDto dto) {
@@ -41,7 +40,7 @@ public class TodoService {
                 .stream()
                 .filter(todo -> todo.getId().equals(UUID.fromString(id)))
                 .findFirst()
-                .orElseThrow(() -> new NotFound(String.format("No todo item exists with the id of '%s'", id)));
+                .orElseThrow(() -> new TodoNotFoundException(String.format("No todo item exists with the id of '%s'", id)));
         delete(id);
         todos.add(todoAssembler.disassembleInto(entity, dto));
         return getById(id);
