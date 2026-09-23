@@ -33,5 +33,5 @@ public class GreetingApp extends Mocha {
 }
 ```
 
-View at `http://localhost:8080/greet/john`.
+View at <a href="http://localhost:8080/greet/john">http://localhost:8080/greet/john<a/>.
 
