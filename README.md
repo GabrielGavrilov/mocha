@@ -1,7 +1,5 @@
 # Mocha
 
-## Getting Started
-
 You can create a controller by adding the `@Controller` and `@Route` annotations:
 
 ```java
